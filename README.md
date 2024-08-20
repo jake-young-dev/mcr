@@ -21,7 +21,7 @@ func main() {
 	}
 	defer client.Close() //always call close to clean up your connections
 
-	response, err := client.Command("list")
+	response, err := client.Command("list") //run "list" command on minecraft server
 	if err != nil {
 		panic(err)
 	}
@@ -31,6 +31,6 @@ func main() {
 ```
 
 # notes
-- To prevent consuming extra resources the Minecraft server is only connected to after calling the Connect method
-- The Close method must be called to clean up the client after use
+- To prevent using connections prematurely the client does not connect to the server on creation, the Connect method must be called
+- To cleanup connections after use call the Close method, it is recommended to defer the Close after the call to Connect
 - The client can be reused after closing by calling the Connect method again

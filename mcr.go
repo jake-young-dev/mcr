@@ -1,16 +1,3 @@
-/*
-Remote console client used to interact with Minecraft servers, the byte order for minecraft rcon is little
-endian and the packet structure is defined as follows:
-
-[Length] length of packet: int32
-[RequestID] client set id for each request used to track responses: int32
-[Type] request packet type: int32
-[Body] body of request/response: Null-terminated ASCII String
-[Padding] body must be terminated by two null bytes
-
-DISCLAIMER
-This code has not been tested with commands that return data exceeding 4096 bytes and may not work.
-*/
 package mcr
 
 import (
@@ -35,7 +22,8 @@ const (
 	Timeout  = time.Second * 10
 
 	//request id reset value
-	ResetID = 1
+	ResetID    = 1
+	HeaderSize = 8
 )
 
 // remote console response headers
@@ -117,11 +105,16 @@ func (c *Client) Command(cmd string) (string, error) {
 	return res.body, nil
 }
 
-// closes remote console connection and resets the request id. The remote console client can be reused by calling
-// the Connect method again
+// closes remote console connection, nil's out the server value in client struct, and resets the request id. The remote
+// console client can be reused by calling the Connect method again
 func (c *Client) Close() error {
 	c.requestID = ResetID
-	return c.server.Close()
+	err := c.server.Close()
+	if err != nil {
+		return err
+	}
+	c.server = nil
+	return nil
 }
 
 // constructs and sends the tcp packet to the minecraft server and parses the response data, requestID is incremented
@@ -138,7 +131,7 @@ func (c *Client) send(packet []byte) (*response, error) {
 		return nil, err
 	}
 
-	payload := make([]byte, res.size-8)
+	payload := make([]byte, res.size-HeaderSize) //read body size (total size - header size)
 	err = binary.Read(c.server, binary.LittleEndian, &payload)
 	if err != nil {
 		return nil, err
@@ -176,11 +169,12 @@ func (c *Client) authenticate(password []byte) error {
 func (c *Client) createPacket(body []byte, packetType int32) ([]byte, error) {
 	length := len(body) + 10 //length of body plus extra for headers
 
-	//RCon packet structure
-	//[Length] int32
-	//[RequestID] int32
-	//[Type] int32
-	//[Body] Null-terminated ASCII String
+	//packet structure
+	//[Length] length of packet: int32
+	//[RequestID] client set id for each request used to track responses: int32
+	//[Type] request packet type: int32
+	//[Body] body of request/response: Null-terminated ASCII String
+	//[Padding] body must be terminated by two null bytes
 
 	var buffer bytes.Buffer
 	err := binary.Write(&buffer, binary.LittleEndian, int32(length))
