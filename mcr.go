@@ -9,21 +9,21 @@ import (
 )
 
 const (
-	//type value for failed authentication requests
-	FailureType = int32(-1)
-	_           = iota //1 is unused
-	//type value for command requests
-	CommandType //2
-	//type value for authentication requests
-	AuthenticationType //3
+	//rcon packet type values
+	FailurePacket = int32(-1)
+	CommandPacket = int32(2)
+	AuthPacket    = int32(3)
 
 	//tcp constants
-	Protocol = "tcp"
-	Timeout  = time.Second * 10
+	Protocol          = "tcp"
+	Timeout           = time.Second * 10
+	RequestPacketSize = 10 //size of headers plus padding bytes
+	PacketHeaderSize  = 8  //size of headers
+	PacketPaddingSize = 2  //size of padding required after body
 
-	//request id reset value
-	ResetID        = 1
-	HeaderSizeWPad = 10
+	//request id values
+	ResetID = 1
+	IDCap   = 100
 )
 
 // remote console response headers
@@ -50,7 +50,6 @@ type IClient interface {
 	Connect(password string) error
 	Command(cmd string) (string, error)
 	Close() error
-	//filtered methods
 	send(packet []byte) (*response, error)
 	authenticate(password []byte) error
 	createPacket(body []byte, packetType int32) ([]byte, error)
@@ -93,7 +92,7 @@ func (c *Client) Command(cmd string) (string, error) {
 		return "", errors.New("the Connect method must be called before commands can be run")
 	}
 
-	packet, err := c.createPacket([]byte(cmd), CommandType)
+	packet, err := c.createPacket([]byte(cmd), CommandPacket)
 	if err != nil {
 		return "", err
 	}
@@ -132,7 +131,7 @@ func (c *Client) send(packet []byte) (*response, error) {
 		return nil, err
 	}
 
-	payload := make([]byte, res.Size-8) //read body size (total size - header size)
+	payload := make([]byte, res.Size-PacketHeaderSize) //read body size (total size - header size)
 	err = binary.Read(c.Server, binary.LittleEndian, &payload)
 	if err != nil {
 		return nil, err
@@ -149,7 +148,7 @@ func (c *Client) send(packet []byte) (*response, error) {
 // sends authentication packet to minecraft server. This must be called before
 // any commands can be run and returns an error if the supplied password is incorrect
 func (c *Client) authenticate(password []byte) error {
-	packet, err := c.createPacket(password, AuthenticationType)
+	packet, err := c.createPacket(password, AuthPacket)
 	if err != nil {
 		return err
 	}
@@ -159,7 +158,7 @@ func (c *Client) authenticate(password []byte) error {
 		return err
 	}
 
-	if res.RequestID == FailureType {
+	if res.RequestID == FailurePacket {
 		return errors.New("authentication failed")
 	}
 
@@ -168,7 +167,7 @@ func (c *Client) authenticate(password []byte) error {
 
 // creates remote console packet using the body data based on the packetType value
 func (c *Client) createPacket(body []byte, packetType int32) ([]byte, error) {
-	length := len(body) + HeaderSizeWPad
+	length := len(body) + RequestPacketSize
 
 	//packet structure
 	//[Length] length of packet: int32
@@ -194,7 +193,7 @@ func (c *Client) createPacket(body []byte, packetType int32) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = binary.Write(&buffer, binary.LittleEndian, [2]byte{}) //padding
+	err = binary.Write(&buffer, binary.LittleEndian, [PacketPaddingSize]byte{}) //padding
 	if err != nil {
 		return nil, err
 	}
@@ -205,7 +204,7 @@ func (c *Client) createPacket(body []byte, packetType int32) ([]byte, error) {
 // and is reset once it exceeds 100 to prevent any overflowing issues
 func (c *Client) incrementRequestID() {
 	c.RequestID++
-	if c.RequestID > 100 {
+	if c.RequestID > IDCap {
 		c.RequestID = ResetID
 	}
 }
