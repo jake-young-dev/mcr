@@ -33,16 +33,16 @@ type headers struct {
 	Type      int32 //type of packet
 }
 
-// remote console response returned to client
-type response struct {
+// command response returned to client
+type Response struct {
 	RequestID int32  //client-side request id
 	Body      string //response from server
 }
 
 // minecraft remote console client
 type Client struct {
-	Server    net.Conn //server connection
-	RequestID int32    //self-incrementing request counter used for unique request id's
+	server    net.Conn //server connection
+	requestID int32    //self-incrementing request counter used for unique request id's
 	address   string   //server address
 }
 
@@ -50,7 +50,7 @@ type IClient interface {
 	Connect(password string) error
 	Command(cmd string) (string, error)
 	Close() error
-	send(packet []byte) (*response, error)
+	send(packet []byte) (*Response, error)
 	authenticate(password []byte) error
 	createPacket(body []byte, packetType int32) ([]byte, error)
 	incrementRequestID()
@@ -60,8 +60,8 @@ type IClient interface {
 // before the client can be used to send commands
 func NewClient(addr string) *Client {
 	return &Client{
-		Server:    nil,
-		RequestID: ResetID,
+		server:    nil,
+		requestID: ResetID,
 		address:   addr,
 	}
 }
@@ -74,7 +74,7 @@ func (c *Client) Connect(password string) error {
 		return err
 	}
 
-	c.Server = connection
+	c.server = connection
 
 	err = c.authenticate([]byte(password))
 	if err != nil {
@@ -88,7 +88,7 @@ func (c *Client) Connect(password string) error {
 // not connected to the server before attempting to send a command. Command examples can be found on the
 // minecraft wiki: https://minecraft.wiki/w/Commands
 func (c *Client) Command(cmd string) (string, error) {
-	if c.Server == nil {
+	if c.server == nil {
 		return "", errors.New("the Connect method must be called before commands can be run")
 	}
 
@@ -108,38 +108,38 @@ func (c *Client) Command(cmd string) (string, error) {
 // closes remote console connection, nil's out the server value in client struct, and resets the request id. The remote
 // console client can be reused by calling the Connect method again
 func (c *Client) Close() error {
-	c.RequestID = ResetID
-	err := c.Server.Close()
+	c.requestID = ResetID
+	err := c.server.Close()
 	if err != nil {
 		return err
 	}
-	c.Server = nil
+	c.server = nil
 	return nil
 }
 
 // constructs and sends the tcp packet to the minecraft server and parses the response data, requestID is incremented
 // after each packet is sent
-func (c *Client) send(packet []byte) (*response, error) {
-	_, err := c.Server.Write(packet)
+func (c *Client) send(packet []byte) (*Response, error) {
+	_, err := c.server.Write(packet)
 	if err != nil {
 		return nil, err
 	}
 
 	var res headers
-	err = binary.Read(c.Server, binary.LittleEndian, &res)
+	err = binary.Read(c.server, binary.LittleEndian, &res)
 	if err != nil {
 		return nil, err
 	}
 
 	payload := make([]byte, res.Size-PacketHeaderSize) //read body size (total size - header size)
-	err = binary.Read(c.Server, binary.LittleEndian, &payload)
+	err = binary.Read(c.server, binary.LittleEndian, &payload)
 	if err != nil {
 		return nil, err
 	}
 
 	c.incrementRequestID()
 
-	return &response{
+	return &Response{
 		RequestID: res.RequestID,
 		Body:      string(payload),
 	}, nil
@@ -181,7 +181,7 @@ func (c *Client) createPacket(body []byte, packetType int32) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = binary.Write(&buffer, binary.LittleEndian, c.RequestID)
+	err = binary.Write(&buffer, binary.LittleEndian, c.requestID)
 	if err != nil {
 		return nil, err
 	}
@@ -203,8 +203,8 @@ func (c *Client) createPacket(body []byte, packetType int32) ([]byte, error) {
 // a simple handler for requestID header, the requestID is incremented after each packet sent to the server
 // and is reset once it exceeds 100 to prevent any overflowing issues
 func (c *Client) incrementRequestID() {
-	c.RequestID++
-	if c.RequestID > IDCap {
-		c.RequestID = ResetID
+	c.requestID++
+	if c.requestID > IDCap {
+		c.requestID = ResetID
 	}
 }
