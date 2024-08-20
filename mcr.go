@@ -124,7 +124,7 @@ func (c *Client) Close() error {
 	return c.server.Close()
 }
 
-// sends a remote console packet to the minecraft server and parse response data, the requestID is incremented
+// constructs and sends the tcp packet to the minecraft server and parses the response data, requestID is incremented
 // after each packet is sent
 func (c *Client) send(packet []byte) (*response, error) {
 	_, err := c.server.Write(packet)
