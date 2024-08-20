@@ -40,8 +40,8 @@ type response struct {
 
 // minecraft remote console client
 type Client struct {
-	server    net.Conn //server connection
-	requestID int32    //self-incrementing request counter used for unique request id's
+	Server    net.Conn //server connection
+	RequestID int32    //self-incrementing request counter used for unique request id's
 	address   string   //server address
 }
 
@@ -60,8 +60,8 @@ type IClient interface {
 // before the client can be used to send commands
 func NewClient(addr string) *Client {
 	return &Client{
-		server:    nil,
-		requestID: ResetID,
+		Server:    nil,
+		RequestID: ResetID,
 		address:   addr,
 	}
 }
@@ -74,7 +74,7 @@ func (c *Client) Connect(password string) error {
 		return err
 	}
 
-	c.server = connection
+	c.Server = connection
 
 	err = c.authenticate([]byte(password))
 	if err != nil {
@@ -88,7 +88,7 @@ func (c *Client) Connect(password string) error {
 // not connected to the server before attempting to send a command. Command examples can be found on the
 // minecraft wiki: https://minecraft.wiki/w/Commands
 func (c *Client) Command(cmd string) (string, error) {
-	if c.server == nil {
+	if c.Server == nil {
 		return "", errors.New("the Connect method must be called before commands can be run")
 	}
 
@@ -108,31 +108,31 @@ func (c *Client) Command(cmd string) (string, error) {
 // closes remote console connection, nil's out the server value in client struct, and resets the request id. The remote
 // console client can be reused by calling the Connect method again
 func (c *Client) Close() error {
-	c.requestID = ResetID
-	err := c.server.Close()
+	c.RequestID = ResetID
+	err := c.Server.Close()
 	if err != nil {
 		return err
 	}
-	c.server = nil
+	c.Server = nil
 	return nil
 }
 
 // constructs and sends the tcp packet to the minecraft server and parses the response data, requestID is incremented
 // after each packet is sent
 func (c *Client) send(packet []byte) (*response, error) {
-	_, err := c.server.Write(packet)
+	_, err := c.Server.Write(packet)
 	if err != nil {
 		return nil, err
 	}
 
 	var res headers
-	err = binary.Read(c.server, binary.LittleEndian, &res)
+	err = binary.Read(c.Server, binary.LittleEndian, &res)
 	if err != nil {
 		return nil, err
 	}
 
 	payload := make([]byte, res.Size-8) //read body size (total size - header size)
-	err = binary.Read(c.server, binary.LittleEndian, &payload)
+	err = binary.Read(c.Server, binary.LittleEndian, &payload)
 	if err != nil {
 		return nil, err
 	}
@@ -181,7 +181,7 @@ func (c *Client) createPacket(body []byte, packetType int32) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = binary.Write(&buffer, binary.LittleEndian, c.requestID)
+	err = binary.Write(&buffer, binary.LittleEndian, c.RequestID)
 	if err != nil {
 		return nil, err
 	}
@@ -203,8 +203,8 @@ func (c *Client) createPacket(body []byte, packetType int32) ([]byte, error) {
 // a simple handler for requestID header, the requestID is incremented after each packet sent to the server
 // and is reset once it exceeds 100 to prevent any overflowing issues
 func (c *Client) incrementRequestID() {
-	c.requestID++
-	if c.requestID > 100 {
-		c.requestID = ResetID
+	c.RequestID++
+	if c.RequestID > 100 {
+		c.RequestID = ResetID
 	}
 }
