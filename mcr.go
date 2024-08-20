@@ -30,6 +30,7 @@ const (
 type headers struct {
 	Size      int32 //size of packet
 	RequestID int32 //client-side request id
+	Type      int32 //type of packet
 }
 
 // remote console response returned to client
