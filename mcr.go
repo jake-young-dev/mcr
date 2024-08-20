@@ -22,8 +22,9 @@ const (
 	Timeout  = time.Second * 10
 
 	//request id reset value
-	ResetID    = 1
-	HeaderSize = 8
+	ResetID        = 1
+	HeaderSize     = 8
+	HeaderSizeWPad = 10
 )
 
 // remote console response headers
@@ -167,7 +168,7 @@ func (c *Client) authenticate(password []byte) error {
 
 // creates remote console packet using the body data based on the packetType value
 func (c *Client) createPacket(body []byte, packetType int32) ([]byte, error) {
-	length := len(body) + 10 //length of body plus extra for headers
+	length := len(body) + HeaderSizeWPad
 
 	//packet structure
 	//[Length] length of packet: int32
