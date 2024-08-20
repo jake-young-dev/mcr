@@ -29,14 +29,14 @@ const (
 
 // remote console response headers
 type headers struct {
-	size      int32 //size of packet
-	requestID int32 //client-side request id
+	Size      int32 //size of packet
+	RequestID int32 //client-side request id
 }
 
 // remote console response returned to client
 type response struct {
-	requestID int32  //client-side request id
-	body      string //response from server
+	RequestID int32  //client-side request id
+	Body      string //response from server
 }
 
 // minecraft remote console client
@@ -103,7 +103,7 @@ func (c *Client) Command(cmd string) (string, error) {
 		return "", err
 	}
 
-	return res.body, nil
+	return res.Body, nil
 }
 
 // closes remote console connection, nil's out the server value in client struct, and resets the request id. The remote
@@ -132,7 +132,7 @@ func (c *Client) send(packet []byte) (*response, error) {
 		return nil, err
 	}
 
-	payload := make([]byte, res.size-HeaderSize) //read body size (total size - header size)
+	payload := make([]byte, res.Size-HeaderSize) //read body size (total size - header size)
 	err = binary.Read(c.server, binary.LittleEndian, &payload)
 	if err != nil {
 		return nil, err
@@ -141,8 +141,8 @@ func (c *Client) send(packet []byte) (*response, error) {
 	c.incrementRequestID()
 
 	return &response{
-		requestID: res.requestID,
-		body:      string(payload),
+		RequestID: res.RequestID,
+		Body:      string(payload),
 	}, nil
 }
 
@@ -159,7 +159,7 @@ func (c *Client) authenticate(password []byte) error {
 		return err
 	}
 
-	if res.requestID == FailureType {
+	if res.RequestID == FailureType {
 		return errors.New("authentication failed")
 	}
 
