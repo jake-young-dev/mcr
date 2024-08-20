@@ -1,5 +1,3 @@
-package mcr
-
 /*
 Remote console client used to interact with Minecraft servers, the byte order for minecraft rcon is little
 endian and the packet structure is defined as follows:
@@ -13,6 +11,7 @@ endian and the packet structure is defined as follows:
 DISCLAIMER
 This code has not been tested with commands that return data exceeding 4096 bytes and may not work.
 */
+package mcr
 
 import (
 	"bytes"
@@ -59,17 +58,18 @@ type Client struct {
 }
 
 type IClient interface {
-	Connect(address, password string) error
+	Connect(password string) error
 	Command(cmd string) (string, error)
 	Close() error
+	//filtered methods
 	send(packet []byte) (*response, error)
 	authenticate(password []byte) error
 	createPacket(body []byte, packetType int32) ([]byte, error)
 	incrementRequestID()
 }
 
-// creates and returns a new remote console client. The Connect method must be called before the client
-// can be used to send commands
+// creates and returns a new remote console client using the supplied address (addr). The Connect method must be called
+// before the client can be used to send commands
 func NewClient(addr string) *Client {
 	return &Client{
 		server:    nil,
@@ -96,9 +96,14 @@ func (c *Client) Connect(password string) error {
 	return nil
 }
 
-// sends a command to the minecraft server and return the server response, command examples can be found on the
+// sends a command to the minecraft server and returns the server response, an error is returned if the client has
+// not connected to the server before attempting to send a command. Command examples can be found on the
 // minecraft wiki: https://minecraft.wiki/w/Commands
 func (c *Client) Command(cmd string) (string, error) {
+	if c.server == nil {
+		return "", errors.New("the Connect method must be called before commands can be run")
+	}
+
 	packet, err := c.createPacket([]byte(cmd), CommandType)
 	if err != nil {
 		return "", err
