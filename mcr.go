@@ -132,7 +132,7 @@ func (c *Client) send(packet []byte) (*response, error) {
 		return nil, err
 	}
 
-	payload := make([]byte, res.Size-HeaderSize) //read body size (total size - header size)
+	payload := make([]byte, int(res.Size-HeaderSize)) //read body size (total size - header size)
 	err = binary.Read(c.server, binary.LittleEndian, &payload)
 	if err != nil {
 		return nil, err
