@@ -52,13 +52,13 @@ type response struct {
 }
 
 // minecraft remote console client
-type client struct {
+type Client struct {
 	server    net.Conn //server connection
 	requestID int32    //self-incrementing request counter used for unique request id's
 	address   string   //server address
 }
 
-type Client interface {
+type IClient interface {
 	Connect(address, password string) error
 	Command(cmd string) (string, error)
 	Close() error
@@ -70,8 +70,8 @@ type Client interface {
 
 // creates and returns a new remote console client. The Connect method must be called before the client
 // can be used to send commands
-func NewClient(addr string) *client {
-	return &client{
+func NewClient(addr string) *Client {
+	return &Client{
 		server:    nil,
 		requestID: ResetID,
 		address:   addr,
@@ -80,7 +80,7 @@ func NewClient(addr string) *client {
 
 // connects to minecraft server and authenticates the client. Ensure to call or defer the call to the Close method
 // to clean up the connection
-func (c *client) Connect(password string) error {
+func (c *Client) Connect(password string) error {
 	connection, err := net.DialTimeout(Protocol, c.address, Timeout)
 	if err != nil {
 		return err
@@ -98,7 +98,7 @@ func (c *client) Connect(password string) error {
 
 // sends a command to the minecraft server and return the server response, command examples can be found on the
 // minecraft wiki: https://minecraft.wiki/w/Commands
-func (c *client) Command(cmd string) (string, error) {
+func (c *Client) Command(cmd string) (string, error) {
 	packet, err := c.createPacket([]byte(cmd), CommandType)
 	if err != nil {
 		return "", err
@@ -114,14 +114,14 @@ func (c *client) Command(cmd string) (string, error) {
 
 // closes remote console connection and resets the request id. The remote console client can be reused by calling
 // the Connect method again
-func (c *client) Close() error {
+func (c *Client) Close() error {
 	c.requestID = ResetID
 	return c.server.Close()
 }
 
 // sends a remote console packet to the minecraft server and parse response data, the requestID is incremented
 // after each packet is sent
-func (c *client) send(packet []byte) (*response, error) {
+func (c *Client) send(packet []byte) (*response, error) {
 	_, err := c.server.Write(packet)
 	if err != nil {
 		return nil, err
@@ -149,7 +149,7 @@ func (c *client) send(packet []byte) (*response, error) {
 
 // sends authentication packet to minecraft server. This must be called before
 // any commands can be run and returns an error if the supplied password is incorrect
-func (c *client) authenticate(password []byte) error {
+func (c *Client) authenticate(password []byte) error {
 	packet, err := c.createPacket(password, AuthenticationType)
 	if err != nil {
 		return err
@@ -168,7 +168,7 @@ func (c *client) authenticate(password []byte) error {
 }
 
 // creates remote console packet using the body data based on the packetType value
-func (c *client) createPacket(body []byte, packetType int32) ([]byte, error) {
+func (c *Client) createPacket(body []byte, packetType int32) ([]byte, error) {
 	length := len(body) + 10 //length of body plus extra for headers
 
 	//RCon packet structure
@@ -203,7 +203,7 @@ func (c *client) createPacket(body []byte, packetType int32) ([]byte, error) {
 
 // a simple handler for requestID header, the requestID is incremented after each packet sent to the server
 // and is reset once it exceeds 100 to prevent any overflowing issues
-func (c *client) incrementRequestID() {
+func (c *Client) incrementRequestID() {
 	c.requestID++
 	if c.requestID > 100 {
 		c.requestID = ResetID
