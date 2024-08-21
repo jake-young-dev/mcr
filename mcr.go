@@ -16,7 +16,7 @@ const (
 
 	//tcp constants
 	Protocol          = "tcp"
-	Timeout           = time.Second * 10
+	DefaultTimeout    = time.Second * 10
 	PacketRequestSize = 10 //size of headers plus padding bytes, not including Size header per RCon standard
 	PacketHeaderSize  = 8  //size of headers not including Size header per RCon standard
 	PacketPaddingSize = 2  //size of padding required after body
@@ -27,7 +27,7 @@ const (
 )
 
 // remote console response headers
-type Headers struct {
+type headers struct {
 	Size      int32 //size of packet
 	RequestID int32 //client-side request id
 	Type      int32 //type of packet
@@ -35,7 +35,8 @@ type Headers struct {
 
 // command response returned to client
 type response struct {
-	RequestID int32  //client-side request id
+	RequestID int32 //client-side request id
+	Type      int32
 	Body      string //response from server
 }
 
@@ -44,27 +45,29 @@ type Client struct {
 	connection net.Conn //server connection
 	requestID  int32    //self-incrementing request counter used for unique request id's
 	address    string   //server address
+	timeout    time.Duration
 }
 
 type IClient interface {
 	//main rcon methods
 	Connect(password string) error
 	Command(cmd string) (string, error)
-	CreatePacket(body []byte, packetType int32) ([]byte, error)
 	Close() error
 	//filtered methods
 	send(packet []byte) (*response, error)
+	createPacket(body []byte, packetType int32) ([]byte, error)
 	authenticate(password []byte) error
 	incrementRequestID()
 }
 
-// creates and returns a new remote console client using the supplied address (addr). The Connect method must be called
-// before the client can be used to send commands
+// creates a new remote console client using the supplied address and applys the options before returning. The client is
+// not connected to the server and Connect method must be called before the client can be used to send commands
 func NewClient(addr string, opts ...Option) *Client {
 	c := &Client{
 		connection: nil,
 		requestID:  ResetID,
 		address:    addr,
+		timeout:    DefaultTimeout,
 	}
 
 	for _, o := range opts {
@@ -77,14 +80,16 @@ func NewClient(addr string, opts ...Option) *Client {
 // connects to minecraft server and authenticates the client. Ensure to call or defer the call to the Close method
 // to clean up the connection
 func (c *Client) Connect(password string) error {
-	connection, err := net.DialTimeout(Protocol, c.address, Timeout)
-	if err != nil {
-		return err
+	if c.connection == nil {
+		connection, err := net.DialTimeout(Protocol, c.address, c.timeout)
+		if err != nil {
+			return err
+		}
+
+		c.connection = connection
 	}
 
-	c.connection = connection
-
-	err = c.authenticate([]byte(password))
+	err := c.authenticate([]byte(password))
 	if err != nil {
 		return err
 	}
@@ -100,7 +105,7 @@ func (c *Client) Command(cmd string) (string, error) {
 		return "", errors.New("the Connect method must be called before commands can be run")
 	}
 
-	packet, err := c.CreatePacket([]byte(cmd), CommandPacket)
+	packet, err := c.createPacket([]byte(cmd), CommandPacket)
 	if err != nil {
 		return "", err
 	}
@@ -113,9 +118,55 @@ func (c *Client) Command(cmd string) (string, error) {
 	return res.Body, nil
 }
 
+// closes remote console connection, nil's out the connection value in client struct, and resets the request id. The remote
+// console client can be reused by calling the Connect method again
+func (c *Client) Close() error {
+	c.requestID = ResetID
+	if c.connection != nil {
+		err := c.connection.Close()
+		if err != nil {
+			return err
+		}
+		c.connection = nil
+	}
+	return nil
+}
+
+// constructs and sends the tcp packet to the minecraft server and parses the response data, requestID is incremented
+// after each packet is sent
+func (c *Client) send(packet []byte) (*response, error) {
+	_, err := c.connection.Write(packet)
+	if err != nil {
+		return nil, err
+	}
+
+	var res headers
+	err = binary.Read(c.connection, binary.LittleEndian, &res)
+	if err != nil {
+		return nil, err
+	}
+
+	payload := make([]byte, res.Size-PacketHeaderSize) //read body size (total size - header size)
+	err = binary.Read(c.connection, binary.LittleEndian, &payload)
+	if err != nil {
+		return nil, err
+	}
+
+	//remove byte padding
+	payload = payload[:len(payload)-2]
+
+	c.incrementRequestID()
+
+	return &response{
+		RequestID: res.RequestID,
+		Type:      res.Type,
+		Body:      string(payload),
+	}, nil
+}
+
 // creates remote console packet including the body and packet type returning the packet bytes. These bytes
 // can be sent directly to the server.
-func (c *Client) CreatePacket(body []byte, packetType int32) ([]byte, error) {
+func (c *Client) createPacket(body []byte, packetType int32) ([]byte, error) {
 	length := len(body) + PacketRequestSize
 
 	//packet structure
@@ -149,53 +200,10 @@ func (c *Client) CreatePacket(body []byte, packetType int32) ([]byte, error) {
 	return buffer.Bytes(), nil
 }
 
-// closes remote console connection, nil's out the connection value in client struct, and resets the request id. The remote
-// console client can be reused by calling the Connect method again
-func (c *Client) Close() error {
-	c.requestID = ResetID
-	err := c.connection.Close()
-	if err != nil {
-		return err
-	}
-	c.connection = nil
-	return nil
-}
-
-// constructs and sends the tcp packet to the minecraft server and parses the response data, requestID is incremented
-// after each packet is sent
-func (c *Client) send(packet []byte) (*response, error) {
-	_, err := c.connection.Write(packet)
-	if err != nil {
-		return nil, err
-	}
-
-	var res Headers
-	err = binary.Read(c.connection, binary.LittleEndian, &res)
-	if err != nil {
-		return nil, err
-	}
-
-	payload := make([]byte, res.Size-PacketHeaderSize) //read body size (total size - header size)
-	err = binary.Read(c.connection, binary.LittleEndian, &payload)
-	if err != nil {
-		return nil, err
-	}
-
-	//remove byte padding
-	payload = payload[:len(payload)-2]
-
-	c.incrementRequestID()
-
-	return &response{
-		RequestID: res.RequestID,
-		Body:      string(payload),
-	}, nil
-}
-
 // sends authentication packet to minecraft server. This must be called before
 // any commands can be run and returns an error if the supplied password is incorrect
 func (c *Client) authenticate(password []byte) error {
-	packet, err := c.CreatePacket(password, AuthPacket)
+	packet, err := c.createPacket(password, AuthPacket)
 	if err != nil {
 		return err
 	}
@@ -205,7 +213,7 @@ func (c *Client) authenticate(password []byte) error {
 		return err
 	}
 
-	if res.RequestID == FailurePacket {
+	if res.Type == FailurePacket {
 		return errors.New("authentication failed")
 	}
 
