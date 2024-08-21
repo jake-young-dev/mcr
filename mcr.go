@@ -17,7 +17,7 @@ const (
 	//tcp constants
 	Protocol          = "tcp"
 	Timeout           = time.Second * 10
-	RequestPacketSize = 10 //size of headers plus padding bytes
+	PacketRequestSize = 10 //size of headers plus padding bytes
 	PacketHeaderSize  = 8  //size of headers
 	PacketPaddingSize = 2  //size of padding required after body
 
@@ -34,7 +34,7 @@ type headers struct {
 }
 
 // command response returned to client
-type Response struct {
+type response struct {
 	RequestID int32  //client-side request id
 	Body      string //response from server
 }
@@ -50,7 +50,7 @@ type IClient interface {
 	Connect(password string) error
 	Command(cmd string) (string, error)
 	Close() error
-	send(packet []byte) (*Response, error)
+	send(packet []byte) (*response, error)
 	authenticate(password []byte) error
 	createPacket(body []byte, packetType int32) ([]byte, error)
 	incrementRequestID()
@@ -119,7 +119,7 @@ func (c *Client) Close() error {
 
 // constructs and sends the tcp packet to the minecraft server and parses the response data, requestID is incremented
 // after each packet is sent
-func (c *Client) send(packet []byte) (*Response, error) {
+func (c *Client) send(packet []byte) (*response, error) {
 	_, err := c.server.Write(packet)
 	if err != nil {
 		return nil, err
@@ -139,7 +139,7 @@ func (c *Client) send(packet []byte) (*Response, error) {
 
 	c.incrementRequestID()
 
-	return &Response{
+	return &response{
 		RequestID: res.RequestID,
 		Body:      string(payload),
 	}, nil
@@ -165,9 +165,9 @@ func (c *Client) authenticate(password []byte) error {
 	return nil
 }
 
-// creates remote console packet using the body data based on the packetType value
+// creates remote console packet using the body data
 func (c *Client) createPacket(body []byte, packetType int32) ([]byte, error) {
-	length := len(body) + RequestPacketSize
+	length := len(body) + PacketRequestSize
 
 	//packet structure
 	//[Length] length of packet: int32
