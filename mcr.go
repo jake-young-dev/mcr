@@ -16,14 +16,14 @@ const (
 
 	//tcp constants
 	Protocol          = "tcp"
-	DefaultTimeout    = time.Second * 10
 	PacketRequestSize = 10 //size of headers plus padding bytes, not including Size header per RCon standard
 	PacketHeaderSize  = 8  //size of headers not including Size header per RCon standard
 	PacketPaddingSize = 2  //size of padding required after body
 
-	//request id values
-	ResetID    = 1
-	DefaultCap = 100
+	//default values
+	ResetID        = 1
+	DefaultCap     = 100
+	DefaultTimeout = time.Second * 10
 )
 
 // remote console response headers
@@ -72,8 +72,8 @@ func NewClient(addr string, opts ...Option) *Client {
 		cap:        DefaultCap,
 	}
 
-	for _, o := range opts {
-		o(c)
+	for _, opt := range opts {
+		opt(c)
 	}
 
 	return c

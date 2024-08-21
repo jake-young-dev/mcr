@@ -6,12 +6,13 @@ Dependency-free Minecraft remote console client written in Golang
 import (
 	"log"
 	"os"
+	"time"
 
 	"github.com/jake-young-dev/mcr"
 )
 
 func main() {
-	//create new client
+	//create new client with minecraft server address and nonmandatory options if the default values need to be changed
 	client := mcr.NewClient(os.Getenv("rcon_address"))
 
 	//connect to server and authenticate with password
