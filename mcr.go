@@ -113,7 +113,8 @@ func (c *Client) Command(cmd string) (string, error) {
 	return res.Body, nil
 }
 
-// creates remote console packet using the body data
+// creates remote console packet including the body and packet type returning the packet bytes. These bytes
+// can be sent directly to the server.
 func (c *Client) CreatePacket(body []byte, packetType int32) ([]byte, error) {
 	length := len(body) + PacketRequestSize
 
