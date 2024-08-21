@@ -17,8 +17,8 @@ const (
 	//tcp constants
 	Protocol          = "tcp"
 	Timeout           = time.Second * 10
-	PacketRequestSize = 10 //size of headers plus padding bytes
-	PacketHeaderSize  = 8  //size of headers I THINK THIS SHOULD BE 12 ??
+	PacketRequestSize = 10 //size of headers plus padding bytes, not including Size header per RCon standard
+	PacketHeaderSize  = 8  //size of headers not including Size header per RCon standard
 	PacketPaddingSize = 2  //size of padding required after body
 
 	//request id values
