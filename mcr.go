@@ -22,8 +22,8 @@ const (
 	PacketPaddingSize = 2  //size of padding required after body
 
 	//request id values
-	ResetID = 1
-	IDCap   = 100
+	ResetID    = 1
+	DefaultCap = 100
 )
 
 // remote console response headers
@@ -42,10 +42,11 @@ type response struct {
 
 // minecraft remote console client
 type Client struct {
-	connection net.Conn //server connection
-	requestID  int32    //self-incrementing request counter used for unique request id's
-	address    string   //server address
-	timeout    time.Duration
+	connection net.Conn      //server connection
+	requestID  int32         //self-incrementing request counter used for unique request id's
+	address    string        //server address
+	timeout    time.Duration //timeout for connection
+	cap        int32
 }
 
 type IClient interface {
@@ -68,6 +69,7 @@ func NewClient(addr string, opts ...Option) *Client {
 		requestID:  ResetID,
 		address:    addr,
 		timeout:    DefaultTimeout,
+		cap:        DefaultCap,
 	}
 
 	for _, o := range opts {
@@ -224,7 +226,7 @@ func (c *Client) authenticate(password []byte) error {
 // and is reset once it exceeds IDCap to prevent any overflowing issues
 func (c *Client) incrementRequestID() {
 	c.requestID++
-	if c.requestID > IDCap {
+	if c.requestID > c.cap {
 		c.requestID = ResetID
 	}
 }

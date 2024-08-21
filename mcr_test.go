@@ -87,10 +87,25 @@ func TestRemoteCommand(t *testing.T) {
 // testing the requestID handling ensuring it is reset once it overflows the cap
 func TestRequestIDReset(t *testing.T) {
 	testingClient := NewClient("testing")
-	testingClient.requestID = IDCap
+	testingClient.requestID = testingClient.cap
 	testingClient.incrementRequestID()
-	if testingClient.requestID > IDCap {
+	if testingClient.requestID != ResetID {
 		t.Error("request id did not properly reset")
+	}
+	//close client
+	err := testingClient.Close()
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+// testing the WithCap option
+func TestCapOption(t *testing.T) {
+	testingClient := NewClient("testing", WithCap(20))
+	testingClient.requestID = testingClient.cap
+	testingClient.incrementRequestID()
+	if testingClient.requestID != ResetID {
+		t.Error("custom request id did not properly reset")
 	}
 	//close client
 	err := testingClient.Close()
