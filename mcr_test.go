@@ -1,8 +1,8 @@
 package mcr_test
 
 import (
+	"encoding/binary"
 	"net"
-	"strings"
 	"sync"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -13,54 +13,60 @@ import (
 
 var _ = Describe("Mcr", func() {
 	var (
-		testc                    *mcr.Client
-		tc, ts                   net.Conn
-		testCmd                  string
-		w                        sync.WaitGroup
-		responseHeader, response []byte
+		testingClient *mcr.Client //main testing client
+		recv, serv    net.Conn    //testing server and client using net.Pipe
+		testCmd       string      //command to send to test server
+		wg            sync.WaitGroup
 	)
 
 	BeforeEach(func() {
-		ts, tc = net.Pipe()
-		testc = mcr.NewClient("testing", mcr.WithClient(tc))
-		// tests = mcr.NewClient("testing", mcr.WithClient(ts))
+		//create client and server with Pipe
+		serv, recv = net.Pipe()
+		//create main testing client with fake address
+		testingClient = mcr.NewClient("testing", mcr.WithClient(recv))
+		//arbitrary command for tests
 		testCmd = "test command"
-		w = sync.WaitGroup{}
-		responseHeader = make([]byte, 12)
-		response = make([]byte, 250)
+		wg = sync.WaitGroup{}
 	})
 
 	Describe("Sending packet to server", func() {
 		Context("with simple command", func() {
-			It("should receive the command", func() {
-
-				w.Add(1)
+			It("should receive the command back from server", func() {
+				//create go routine to send command
+				wg.Add(1)
 				go func(t string) {
-					res, err := testc.Command(t)
+					res, err := testingClient.Command(t)
+					//no error
 					Expect(err).To(BeNil())
-
-					t += "\x00\x00"
-					Expect(strings.TrimSpace(res)).To(Equal(t))
-					w.Done()
+					//response should match command
+					Expect(res).To(Equal(t))
+					wg.Done()
 				}(testCmd)
 
-				// log.Println("reading")
-				ts.Read(responseHeader)
-				ts.Read(response)
-				// log.Println(string(response))
-
-				// time.Sleep(time.Second * 2)
-
-				// log.Println("responding")
-				ts.Write(responseHeader)
-				// log.Println("1 sent")
-				_, err := ts.Write(response)
+				//read command from testingClient
+				var resHead mcr.Headers
+				err := binary.Read(serv, binary.LittleEndian, &resHead)
 				Expect(err).To(BeNil())
 
-				// log.Println("waiting")
-				w.Wait()
+				response := make([]byte, 14)
+				_, err = serv.Read(response)
+				Expect(err).To(BeNil())
+				//remove trailing bytes while confirming command request, these are cleaned in the client methods
+				Expect(string(response[:len(response)-2])).To(Equal(testCmd))
 
-				err = testc.Close()
+				//create response packet, reply with command
+				p, err := testingClient.CreatePacket([]byte(testCmd), resHead.Type)
+				Expect(err).To(BeNil())
+				_, err = serv.Write(p)
+				Expect(err).To(BeNil())
+
+				//wait for routine to wrap up
+				wg.Wait()
+
+				//close client
+				err = testingClient.Close()
+				serv.Close()
+				recv.Close()
 				Expect(err).To(BeNil())
 
 			})

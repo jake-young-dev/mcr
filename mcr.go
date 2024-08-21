@@ -17,9 +17,9 @@ const (
 	//tcp constants
 	Protocol          = "tcp"
 	Timeout           = time.Second * 10
-	PacketRequestSize = 12 //10 //size of headers plus padding bytes
-	// PacketHeaderSize  = 8  //size of headers I THINK THIS SHOULD BE 12 ??
-	PacketPaddingSize = 2 //size of padding required after body
+	PacketRequestSize = 10 //size of headers plus padding bytes
+	PacketHeaderSize  = 8  //size of headers I THINK THIS SHOULD BE 12 ??
+	PacketPaddingSize = 2  //size of padding required after body
 
 	//request id values
 	ResetID = 1
@@ -27,7 +27,7 @@ const (
 )
 
 // remote console response headers
-type headers struct {
+type Headers struct {
 	Size      int32 //size of packet
 	RequestID int32 //client-side request id
 	Type      int32 //type of packet
@@ -50,11 +50,11 @@ type IClient interface {
 	//main rcon methods
 	Connect(password string) error
 	Command(cmd string) (string, error)
+	CreatePacket(body []byte, packetType int32) ([]byte, error)
 	Close() error
 	//filtered methods
 	send(packet []byte) (*response, error)
 	authenticate(password []byte) error
-	createPacket(body []byte, packetType int32) ([]byte, error)
 	incrementRequestID()
 }
 
@@ -100,7 +100,7 @@ func (c *Client) Command(cmd string) (string, error) {
 		return "", errors.New("the Connect method must be called before commands can be run")
 	}
 
-	packet, err := c.createPacket([]byte(cmd), CommandPacket)
+	packet, err := c.CreatePacket([]byte(cmd), CommandPacket)
 	if err != nil {
 		return "", err
 	}
@@ -113,68 +113,8 @@ func (c *Client) Command(cmd string) (string, error) {
 	return res.Body, nil
 }
 
-// closes remote console connection, nil's out the connection value in client struct, and resets the request id. The remote
-// console client can be reused by calling the Connect method again
-func (c *Client) Close() error {
-	c.requestID = ResetID
-	err := c.connection.Close()
-	if err != nil {
-		return err
-	}
-	c.connection = nil
-	return nil
-}
-
-// constructs and sends the tcp packet to the minecraft server and parses the response data, requestID is incremented
-// after each packet is sent
-func (c *Client) send(packet []byte) (*response, error) {
-	_, err := c.connection.Write(packet)
-	if err != nil {
-		return nil, err
-	}
-
-	var res headers
-	err = binary.Read(c.connection, binary.LittleEndian, &res)
-	if err != nil {
-		return nil, err
-	}
-
-	payload := make([]byte, res.Size-PacketRequestSize) //read body size (total size - header size)
-	err = binary.Read(c.connection, binary.LittleEndian, &payload)
-	if err != nil {
-		return nil, err
-	}
-
-	c.incrementRequestID()
-
-	return &response{
-		RequestID: res.RequestID,
-		Body:      string(payload),
-	}, nil
-}
-
-// sends authentication packet to minecraft server. This must be called before
-// any commands can be run and returns an error if the supplied password is incorrect
-func (c *Client) authenticate(password []byte) error {
-	packet, err := c.createPacket(password, AuthPacket)
-	if err != nil {
-		return err
-	}
-
-	res, err := c.send(packet)
-	if err != nil {
-		return err
-	}
-
-	if res.RequestID == FailurePacket {
-		return errors.New("authentication failed")
-	}
-
-	return nil
-}
-
 // creates remote console packet using the body data
-func (c *Client) createPacket(body []byte, packetType int32) ([]byte, error) {
+func (c *Client) CreatePacket(body []byte, packetType int32) ([]byte, error) {
 	length := len(body) + PacketRequestSize
 
 	//packet structure
@@ -206,6 +146,69 @@ func (c *Client) createPacket(body []byte, packetType int32) ([]byte, error) {
 		return nil, err
 	}
 	return buffer.Bytes(), nil
+}
+
+// closes remote console connection, nil's out the connection value in client struct, and resets the request id. The remote
+// console client can be reused by calling the Connect method again
+func (c *Client) Close() error {
+	c.requestID = ResetID
+	err := c.connection.Close()
+	if err != nil {
+		return err
+	}
+	c.connection = nil
+	return nil
+}
+
+// constructs and sends the tcp packet to the minecraft server and parses the response data, requestID is incremented
+// after each packet is sent
+func (c *Client) send(packet []byte) (*response, error) {
+	_, err := c.connection.Write(packet)
+	if err != nil {
+		return nil, err
+	}
+
+	var res Headers
+	err = binary.Read(c.connection, binary.LittleEndian, &res)
+	if err != nil {
+		return nil, err
+	}
+
+	payload := make([]byte, res.Size-PacketHeaderSize) //read body size (total size - header size)
+	err = binary.Read(c.connection, binary.LittleEndian, &payload)
+	if err != nil {
+		return nil, err
+	}
+
+	//remove byte padding
+	payload = payload[:len(payload)-2]
+
+	c.incrementRequestID()
+
+	return &response{
+		RequestID: res.RequestID,
+		Body:      string(payload),
+	}, nil
+}
+
+// sends authentication packet to minecraft server. This must be called before
+// any commands can be run and returns an error if the supplied password is incorrect
+func (c *Client) authenticate(password []byte) error {
+	packet, err := c.CreatePacket(password, AuthPacket)
+	if err != nil {
+		return err
+	}
+
+	res, err := c.send(packet)
+	if err != nil {
+		return err
+	}
+
+	if res.RequestID == FailurePacket {
+		return errors.New("authentication failed")
+	}
+
+	return nil
 }
 
 // a simple handler for requestID header, the requestID is incremented after each packet sent to the server

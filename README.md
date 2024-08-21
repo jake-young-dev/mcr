@@ -1,5 +1,5 @@
 # mcr
-Dependency-free Minecraft remote console client written in Golang
+Minecraft remote console client written in Golang using the standard library. This library is largely dependency-free only importing Ginkgo and Gomega for unit tests.
 
 # usage
 ```
