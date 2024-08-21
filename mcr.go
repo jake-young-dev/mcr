@@ -201,7 +201,7 @@ func (c *Client) createPacket(body []byte, packetType int32) ([]byte, error) {
 }
 
 // a simple handler for requestID header, the requestID is incremented after each packet sent to the server
-// and is reset once it exceeds 100 to prevent any overflowing issues
+// and is reset once it exceeds IDCap to prevent any overflowing issues
 func (c *Client) incrementRequestID() {
 	c.requestID++
 	if c.requestID > IDCap {
