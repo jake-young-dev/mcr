@@ -6,7 +6,6 @@ Dependency-free Minecraft remote console client written in Golang
 import (
 	"log"
 	"os"
-	"time"
 
 	"github.com/jake-young-dev/mcr"
 )
