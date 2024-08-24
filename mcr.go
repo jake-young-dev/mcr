@@ -120,8 +120,7 @@ func (c *Client) Command(cmd string) (string, error) {
 	return res.Body, nil
 }
 
-// closes remote console connection, nil's out the connection value in client struct, and resets the request id. The remote
-// console client can be reused by calling the Connect method again
+// closes remote console connection, nil's out the connection value in client struct, and resets the request id
 func (c *Client) Close() error {
 	c.requestID = ResetID
 	if c.connection != nil {
