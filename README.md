@@ -1,7 +1,7 @@
 # mcr
 Dependency-free Minecraft remote console client written in Golang
 
-[![Pipeline](https://github.com/jake-young-dev/mcr/actions/workflows/pipeline.yaml/badge.svg)](https://github.com/jake-young-dev/mcr/actions/workflows/pipeline.yaml)
+[![Pipeline](https://github.com/jake-young-dev/mcr/actions/workflows/pipeline.yaml/badge.svg?branch=master)](https://github.com/jake-young-dev/mcr/actions/workflows/pipeline.yaml)
 
 # usage
 ```
