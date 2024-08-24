@@ -1,7 +1,7 @@
 # mcr
 Dependency-free Minecraft remote console client written in Golang
 
-![Test](https://github.com/jake-young-dev/mcr/actions/workflows/go.yml/badge.svg)
+[![](https://github.com/jake-young-dev/mcr/actions/workflows/go.yml/badge.svg)(Test)
 
 # usage
 ```
