@@ -214,7 +214,7 @@ func (c *Client) authenticate(password []byte) error {
 		return err
 	}
 
-	if res.Type == FailurePacket {
+	if res.RequestID == FailurePacket { //request id is set to -1 if auth fails
 		return errors.New("authentication failed")
 	}
 
