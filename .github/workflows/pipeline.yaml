@@ -6,6 +6,8 @@ name: Pipeline
 on:
   push:
     branches: [ "**" ]
+    paths:
+      - '*.go'
   pull_request:
     branches: [ "master" ]
 

@@ -1,5 +1,5 @@
 # mcr
-Dependency-free Minecraft remote console package written in Golang
+Dependency-free Minecraft remote console (RCon) package written in Golang
 
 [![Pipeline](https://github.com/jake-young-dev/mcr/actions/workflows/pipeline.yaml/badge.svg?branch=master)](https://github.com/jake-young-dev/mcr/actions/workflows/pipeline.yaml)
 
