@@ -10,8 +10,6 @@ import (
 	"time"
 )
 
-//ngl these tests are nasty
-
 // run with "go test -cover -v" to show coverage and to list the tests ran
 
 // test case creating a new client and mock connection and sending a command using the Command
