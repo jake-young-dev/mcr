@@ -32,6 +32,9 @@ func main() {
 }
 ```
 
+# security
+- RCon is an inherently insecure protocol that sends passwords in plaintext. I recommend using a VPN or keeping the connection local when possible.
+
 # notes
 - To prevent using connections prematurely the client does not connect to the server on creation, the Connect method must be called
 - To cleanup connections after use call the Close method, it is recommended to defer the Close after the call to Connect
