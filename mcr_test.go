@@ -36,7 +36,6 @@ func TestRemoteCommand(t *testing.T) {
 	ec := make(chan error)
 	go func(testing string) {
 		res, err := testingClient.Command(testing)
-		//no error
 		if err != nil {
 			ec <- err
 			wg.Done()
@@ -140,6 +139,15 @@ func TestTimeoutOption(t *testing.T) {
 	}
 }
 
+// testing using a different port
+func TestPortOption(t *testing.T) {
+	testPort := 9876
+	tc := NewClient("test", WithPort(testPort))
+	if tc.port != testPort { //no real reason to test this but i want to
+		t.Fatal("ports did not match")
+	}
+}
+
 // testing authentication using the Connect method
 func TestAuthenticationUsingConnect(t *testing.T) {
 	var (
@@ -149,7 +157,7 @@ func TestAuthenticationUsingConnect(t *testing.T) {
 		wg            sync.WaitGroup
 	)
 
-	//create client and server with Pipe
+	//create client and server
 	serv, recv = net.Pipe()
 	//create main testing client with fake address
 	testingClient = NewClient("testing")

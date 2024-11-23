@@ -32,10 +32,15 @@ func main() {
 }
 ```
 
+# default options
+- Timeout is defaulted 10 seconds
+- Port is defaulted to 61695
+
 # security
 - RCon is an inherently insecure protocol that sends passwords in plaintext. I recommend using a VPN or keeping the connection local when possible.
 
 # notes
+- Connections are defaulted to port 61695 unless changed using WithPort option
 - To prevent using connections prematurely the client does not connect to the server on creation, the Connect method must be called
 - To cleanup connections after use call the Close method, it is recommended to defer the Close after the call to Connect
 - The client can be reused after closing by calling the Connect method again
