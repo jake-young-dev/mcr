@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"net"
 	"time"
 )
@@ -24,6 +25,7 @@ const (
 	ResetID        = 1
 	DefaultCap     = 100
 	DefaultTimeout = time.Second * 10
+	DefaultPort    = 61695
 )
 
 // remote console response headers
@@ -45,8 +47,9 @@ type Client struct {
 	connection net.Conn      //server connection
 	requestID  int32         //self-incrementing request counter used for unique request id's
 	address    string        //server address
+	port       int           //server port
 	timeout    time.Duration //timeout for connection
-	cap        int32
+	cap        int32         //request id capacity before resetting it
 }
 
 type IClient interface {
@@ -61,13 +64,14 @@ type IClient interface {
 	incrementRequestID()
 }
 
-// creates a new remote console client using the supplied address and applys the options before returning. The client is
-// not connected to the server and Connect method must be called before the client can be used to send commands
+// creates a new remote console client configured with the supplied options. The client does not connect to the server until the
+// Connect method is called to authenticate the client. Check the README for information on default values
 func NewClient(addr string, opts ...Option) *Client {
 	c := &Client{
 		connection: nil,
 		requestID:  ResetID,
 		address:    addr,
+		port:       DefaultPort,
 		timeout:    DefaultTimeout,
 		cap:        DefaultCap,
 	}
@@ -83,7 +87,7 @@ func NewClient(addr string, opts ...Option) *Client {
 // to clean up the connection
 func (c *Client) Connect(password string) error {
 	if c.connection == nil {
-		connection, err := net.DialTimeout(Protocol, c.address, c.timeout)
+		connection, err := net.DialTimeout(Protocol, fmt.Sprintf("%s:%d", c.address, c.port), c.timeout)
 		if err != nil {
 			return err
 		}
