@@ -13,7 +13,7 @@ import (
 )
 
 func main() {
-	//create new client with minecraft server address and nonmandatory options if the default values need to be changed
+	//create new client with minecraft server address and nonmandatory options if the default values, like port, need to be changed
 	client := mcr.NewClient(os.Getenv("rcon_address"))
 
 	//connect to server and authenticate with password
