@@ -42,7 +42,7 @@ type response struct {
 	Body      string //response from server
 }
 
-// minecraft remote console client
+// remote console client
 type Client struct {
 	connection net.Conn      //server connection
 	requestID  int32         //self-incrementing request counter used for unique request id's
@@ -83,7 +83,7 @@ func NewClient(addr string, opts ...Option) *Client {
 	return c
 }
 
-// connects to minecraft server and authenticates the client. Ensure to call or defer the call to the Close method
+// connects to server and authenticates the client. Ensure to call or defer the call to the Close method
 // to clean up the connection
 func (c *Client) Connect(password string) error {
 	if c.connection == nil {
@@ -103,9 +103,8 @@ func (c *Client) Connect(password string) error {
 	return nil
 }
 
-// sends a command to the minecraft server and returns the server response, an error is returned if the client has
-// not connected to the server before attempting to send a command. Command examples can be found on the
-// minecraft wiki: https://minecraft.wiki/w/Commands
+// sends a command to the server and returns the server response, an error is returned if the client has
+// not connected to the server before attempting to send a command
 func (c *Client) Command(cmd string) (string, error) {
 	if c.connection == nil {
 		return "", errors.New("the Connect method must be called before commands can be run")
@@ -137,7 +136,7 @@ func (c *Client) Close() error {
 	return nil
 }
 
-// constructs and sends the tcp packet to the minecraft server and parses the response data, requestID is incremented
+// constructs and sends the tcp packet to the server and parses the response data, requestID is incremented
 // after each packet is sent
 func (c *Client) send(packet []byte) (*response, error) {
 	_, err := c.connection.Write(packet)
@@ -205,7 +204,7 @@ func (c *Client) createPacket(body []byte, packetType int32) ([]byte, error) {
 	return buffer.Bytes(), nil
 }
 
-// sends authentication packet to minecraft server. This must be called before
+// sends authentication packet to server. This must be called before
 // any commands can be run and returns an error if the supplied password is incorrect
 func (c *Client) authenticate(password []byte) error {
 	packet, err := c.createPacket(password, AuthPacket)
