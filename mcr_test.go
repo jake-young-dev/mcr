@@ -25,8 +25,7 @@ func TestRemoteCommand(t *testing.T) {
 	//create client and server with Pipe
 	serv, recv = net.Pipe()
 	//create main testing client with fake address
-	testingClient = NewClient("testing")
-	testingClient.connection = recv //use mock connector
+	testingClient = NewClient("testing", WithConnection(recv))
 	//arbitrary command for tests
 	testCmd = "test command"
 	wg = sync.WaitGroup{}
@@ -149,7 +148,7 @@ func TestPortOption(t *testing.T) {
 }
 
 // testing authentication using the Connect method
-func TestAuthenticationUsingConnect(t *testing.T) {
+func TestAuthentication(t *testing.T) {
 	var (
 		testingClient *Client  //main testing client
 		recv, serv    net.Conn //testing server and client using net.Pipe
