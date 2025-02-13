@@ -142,8 +142,17 @@ func TestTimeoutOption(t *testing.T) {
 func TestPortOption(t *testing.T) {
 	testPort := 9876
 	tc := NewClient("test", WithPort(testPort))
-	if tc.port != testPort { //no real reason to test this but i want to
+	if tc.port != testPort {
 		t.Fatal("ports did not match")
+	}
+}
+
+// testing using custom connection
+func TestConnectionOption(t *testing.T) {
+	srv, _ := net.Pipe()
+	tc := NewClient("test", WithConnection(srv))
+	if tc.connection != srv {
+		t.Fatal("connection was not updated")
 	}
 }
 
