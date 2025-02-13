@@ -25,8 +25,7 @@ func TestRemoteCommand(t *testing.T) {
 	//create client and server with Pipe
 	serv, recv = net.Pipe()
 	//create main testing client with fake address
-	testingClient = NewClient("testing")
-	testingClient.connection = recv //use mock connector
+	testingClient = NewClient("testing", WithConnection(recv))
 	//arbitrary command for tests
 	testCmd = "test command"
 	wg = sync.WaitGroup{}
@@ -143,13 +142,22 @@ func TestTimeoutOption(t *testing.T) {
 func TestPortOption(t *testing.T) {
 	testPort := 9876
 	tc := NewClient("test", WithPort(testPort))
-	if tc.port != testPort { //no real reason to test this but i want to
+	if tc.port != testPort {
 		t.Fatal("ports did not match")
 	}
 }
 
+// testing using custom connection
+func TestConnectionOption(t *testing.T) {
+	srv, _ := net.Pipe()
+	tc := NewClient("test", WithConnection(srv))
+	if tc.connection != srv {
+		t.Fatal("connection was not updated")
+	}
+}
+
 // testing authentication using the Connect method
-func TestAuthenticationUsingConnect(t *testing.T) {
+func TestAuthentication(t *testing.T) {
 	var (
 		testingClient *Client  //main testing client
 		recv, serv    net.Conn //testing server and client using net.Pipe
@@ -160,8 +168,7 @@ func TestAuthenticationUsingConnect(t *testing.T) {
 	//create client and server
 	serv, recv = net.Pipe()
 	//create main testing client with fake address
-	testingClient = NewClient("testing")
-	testingClient.connection = recv //use mock connector
+	testingClient = NewClient("testing", WithConnection(recv))
 	//fake testing password
 	testPwd = "password"
 	wg = sync.WaitGroup{}

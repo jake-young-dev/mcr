@@ -1,6 +1,7 @@
 package mcr
 
 import (
+	"net"
 	"time"
 )
 
@@ -25,5 +26,12 @@ func WithTimeout(timeout time.Duration) Option {
 func WithCap(c int32) Option {
 	return func(cn *Client) {
 		cn.cap = c
+	}
+}
+
+// option to allow for use of custom connections
+func WithConnection(c net.Conn) Option {
+	return func(cn *Client) {
+		cn.connection = c
 	}
 }
