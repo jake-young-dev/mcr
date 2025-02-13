@@ -168,8 +168,7 @@ func TestAuthentication(t *testing.T) {
 	//create client and server
 	serv, recv = net.Pipe()
 	//create main testing client with fake address
-	testingClient = NewClient("testing")
-	testingClient.connection = recv //use mock connector
+	testingClient = NewClient("testing", WithConnection(recv))
 	//fake testing password
 	testPwd = "password"
 	wg = sync.WaitGroup{}
