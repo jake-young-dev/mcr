@@ -1,11 +1,11 @@
-name: Tests
+name: tests
 
 on:
   push:
     branches: [ "**" ]
     paths:
       - "*.go"
-      - "*.yaml"
+      - ".github/workflows/test.yaml"
   pull_request:
     branches: [ "master" ]
 
