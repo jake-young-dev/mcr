@@ -5,7 +5,6 @@ on:
     branches: [ "**" ]
     paths:
       - "*.go"
-      - ".github/workflows/test.yaml"
   pull_request:
     branches: [ "master" ]
 
@@ -16,16 +15,11 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: set up go
-        uses: jake-young-dev/go-install-script@v0.2.1
+        uses: jake-young-dev/go-install-script@v0.2.2 #ensure we test with go version of project
+        with:
+          architecture: amd64
+          purge: yes
 
       - name: test
         shell: bash
-        run: go test -v -cover
-  extra:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: test
-        shell: bash
-        run: go test -v -cover
+        run: go test -cover
