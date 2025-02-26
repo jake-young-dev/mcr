@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: set up go
-        uses: jake-young-dev/go-install-script@v0.2.2 #ensure we test with go version of project
+        uses: jake-young-dev/go-install-script@v0.3.0
         with:
           architecture: amd64
           purge: yes
