@@ -3,8 +3,6 @@ name: tests
 on:
   push:
     branches: [ "**" ]
-    paths:
-      - "*.go"
   pull_request:
     branches: [ "master" ]
 
