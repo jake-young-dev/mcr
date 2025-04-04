@@ -5,7 +5,6 @@ on:
     branches: [ "**" ]
     paths:
       - "*.go"
-      - ".github/workflows/test.yaml" #trigger workflow while we test
   pull_request:
     branches: [ "master" ]
 
@@ -16,7 +15,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: setup go
-        uses: https://code.jakeyoungdev.com/actions/install-go@v0.1.1
+        uses: jake-young-dev/actions.golang@v0.1.0 #using github mirror repo due to gh runner issues
         with:
           purge: yes
 
