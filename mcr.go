@@ -56,9 +56,11 @@ type IClient interface {
 	//main rcon methods
 	Connect(password string) error
 	Command(cmd string) (string, error)
+	Send(cmd string) error
 	Close() error
 	//filtered methods
-	send(packet []byte) (*response, error)
+	sendAndRecv(packet []byte) (*response, error)
+	send(packet []byte) error
 	createPacket(body []byte, packetType int32) ([]byte, error)
 	authenticate(password []byte) error
 	incrementRequestID()
@@ -83,7 +85,7 @@ func NewClient(addr string, opts ...Option) *Client {
 	return c
 }
 
-// connects to server and authenticates the client. Ensure to call or defer the call to the Close method
+// connects to server and authenticates the client. Ensure to call, or defer the call to, the Close method
 // to clean up the connection
 func (c *Client) Connect(password string) error {
 	if c.connection == nil {
@@ -115,12 +117,27 @@ func (c *Client) Command(cmd string) (string, error) {
 		return "", err
 	}
 
-	res, err := c.send(packet)
+	res, err := c.sendAndRecv(packet)
 	if err != nil {
 		return "", err
 	}
 
 	return res.Body, nil
+}
+
+// sends a command to the server without waiting for the response, an error is returned if the client has
+// not connected to the server before attempting to send a command
+func (c *Client) Send(cmd string) error {
+	if c.connection == nil {
+		return errors.New("the Connect method must be called before commands can be run")
+	}
+
+	packet, err := c.createPacket([]byte(cmd), CommandPacket)
+	if err != nil {
+		return err
+	}
+
+	return c.send(packet)
 }
 
 // closes remote console connection, nil's out the connection value in client struct, and resets the request id
@@ -138,7 +155,7 @@ func (c *Client) Close() error {
 
 // constructs and sends the tcp packet to the server and parses the response data, requestID is incremented
 // after each packet is sent
-func (c *Client) send(packet []byte) (*response, error) {
+func (c *Client) sendAndRecv(packet []byte) (*response, error) {
 	_, err := c.connection.Write(packet)
 	if err != nil {
 		return nil, err
@@ -166,6 +183,18 @@ func (c *Client) send(packet []byte) (*response, error) {
 		Type:      res.Type,
 		Body:      string(payload),
 	}, nil
+}
+
+// constructs and sends the tcp packet to the server without waiting for a response, requestID is incremented
+// after each packet is sent
+func (c *Client) send(packet []byte) error {
+	_, err := c.connection.Write(packet)
+	if err != nil {
+		return err
+	}
+	c.incrementRequestID()
+
+	return nil
 }
 
 // creates remote console packet including the body and packet type returning the packet bytes. These bytes
@@ -212,7 +241,7 @@ func (c *Client) authenticate(password []byte) error {
 		return err
 	}
 
-	res, err := c.send(packet)
+	res, err := c.sendAndRecv(packet)
 	if err != nil {
 		return err
 	}

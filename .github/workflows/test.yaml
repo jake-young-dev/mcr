@@ -14,8 +14,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: set up go
-        uses: jake-young-dev/actions.golang@v0.1.0
+      - name: setup go
+        uses: https://code.jakeyoungdev.com/actions/install-go@v0.1.0
         with:
           purge: yes
 
