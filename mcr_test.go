@@ -12,7 +12,7 @@ import (
 
 /*
 This test a file is a bit messy, it should be rewritten to use a setup() and teardown() function utilizing a
-TestingController() function that would call nested tXxx() functions while handling proper setup/teardown
+TestingController() function that would call nested tRemoteCommand() functions while handling proper setup/teardown
 */
 
 // run with "go test -cover -v" to show coverage and to list the tests ran
@@ -101,7 +101,7 @@ func TestRemoteCommand(t *testing.T) {
 }
 
 // testing sending a command to the server without waiting for a response
-func TestRemoteCommandNoRes(t *testing.T) {
+func TestRemoteCommandNoResponse(t *testing.T) {
 	var (
 		testingClient *Client  //main testing client
 		recv, serv    net.Conn //testing server and client using net.Pipe
@@ -121,7 +121,7 @@ func TestRemoteCommandNoRes(t *testing.T) {
 	wg.Add(1)
 	ec := make(chan error)
 	go func(testing string) {
-		err := testingClient.Send(testing)
+		err := testingClient.CommandNoResponse(testing)
 		if err != nil {
 			ec <- err
 			wg.Done()

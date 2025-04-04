@@ -56,7 +56,7 @@ type IClient interface {
 	//main rcon methods
 	Connect(password string) error
 	Command(cmd string) (string, error)
-	Send(cmd string) error
+	CommandNoResponse(cmd string) error
 	Close() error
 	//filtered methods
 	sendAndRecv(packet []byte) (*response, error)
@@ -127,7 +127,7 @@ func (c *Client) Command(cmd string) (string, error) {
 
 // sends a command to the server without waiting for the response, an error is returned if the client has
 // not connected to the server before attempting to send a command
-func (c *Client) Send(cmd string) error {
+func (c *Client) CommandNoResponse(cmd string) error {
 	if c.connection == nil {
 		return errors.New("the Connect method must be called before commands can be run")
 	}
