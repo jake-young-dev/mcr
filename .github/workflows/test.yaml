@@ -12,7 +12,8 @@ jobs:
   tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: setup job
+        uses: actions/checkout@v4
 
       - name: setup go
         uses: https://code.jakeyoungdev.com/actions/install-go@v0.1.0
