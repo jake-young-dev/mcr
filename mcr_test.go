@@ -10,6 +10,11 @@ import (
 	"time"
 )
 
+/*
+This test a file is a bit messy, it should be rewritten to use a setup() and teardown() function utilizing a
+TestingController() function that would call nested tRemoteCommand() functions while handling proper setup/teardown
+*/
+
 // run with "go test -cover -v" to show coverage and to list the tests ran
 
 // test case creating a new client and mock connection and sending a command using the Command
@@ -75,6 +80,73 @@ func TestRemoteCommand(t *testing.T) {
 	_, err = serv.Write(p)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	//wait for routine to wrap up
+	check := <-ec
+	wg.Wait()
+	close(ec)
+	if check != nil {
+		t.Fatal(check)
+	}
+
+	//close client
+	err = testingClient.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	serv.Close()
+	recv.Close()
+}
+
+// testing sending a command to the server without waiting for a response
+func TestRemoteCommandNoResponse(t *testing.T) {
+	var (
+		testingClient *Client  //main testing client
+		recv, serv    net.Conn //testing server and client using net.Pipe
+		testCmd       string   //command to send to test server
+		wg            sync.WaitGroup
+	)
+
+	//create client and server with Pipe
+	serv, recv = net.Pipe()
+	//create main testing client with fake address
+	testingClient = NewClient("testing", WithConnection(recv))
+	//arbitrary command for tests
+	testCmd = "test command"
+	wg = sync.WaitGroup{}
+
+	//create go routine to send command
+	wg.Add(1)
+	ec := make(chan error)
+	go func(testing string) {
+		err := testingClient.CommandNoResponse(testing)
+		if err != nil {
+			ec <- err
+			wg.Done()
+			return
+		}
+
+		ec <- nil
+		wg.Done()
+	}(testCmd)
+
+	//read command from testingClient
+	var resHead headers
+	err := binary.Read(serv, binary.LittleEndian, &resHead)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	response := make([]byte, 14)
+	_, err = serv.Read(response)
+	if err != nil {
+		t.Fatal(err)
+	}
+	//remove trailing bytes while confirming command request, these are cleaned in the client methods
+	if !strings.EqualFold(string(response[:len(response)-2]), testCmd) {
+		t.Fatal("the server did not recieve the matching command sent from client")
 	}
 
 	//wait for routine to wrap up

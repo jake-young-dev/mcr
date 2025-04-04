@@ -14,10 +14,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: set up go
-        uses: jake-young-dev/actions.golang@v0.1.0
+      - name: setup go
+        uses: actions/setup-go@v5
         with:
-          purge: yes
+          go-version: "1.24.0"
 
       - name: unit tests
         shell: bash
