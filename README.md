@@ -37,3 +37,4 @@ func main() {
 
 # Security
 - RCon is an inherently insecure protocol that sends passwords in plaintext. I recommend using a VPN or keeping the connection local when possible.
+- All code is checked with [gosec](https://github.com/securego/gosec) as an added security measure

@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"math"
 	"net"
 	"time"
 )
@@ -64,6 +65,7 @@ type IClient interface {
 	createPacket(body []byte, packetType int32) ([]byte, error)
 	authenticate(password []byte) error
 	incrementRequestID()
+	safeIntConversion(n int) (int32, error)
 }
 
 // creates a new remote console client configured with the supplied options. The client does not connect to the server until the
@@ -200,7 +202,10 @@ func (c *Client) send(packet []byte) error {
 // creates remote console packet including the body and packet type returning the packet bytes. These bytes
 // can be sent directly to the server.
 func (c *Client) createPacket(body []byte, packetType int32) ([]byte, error) {
-	length := len(body) + PacketRequestSize
+	length, err := c.safeIntConversion(len(body) + PacketRequestSize)
+	if err != nil {
+		return nil, err
+	}
 
 	//packet structure
 	//[Length] length of packet: int32
@@ -210,7 +215,7 @@ func (c *Client) createPacket(body []byte, packetType int32) ([]byte, error) {
 	//[Padding] body must be terminated by two null bytes
 
 	var buffer bytes.Buffer
-	err := binary.Write(&buffer, binary.LittleEndian, int32(length))
+	err = binary.Write(&buffer, binary.LittleEndian, length)
 	if err != nil {
 		return nil, err
 	}
@@ -260,4 +265,13 @@ func (c *Client) incrementRequestID() {
 	if c.requestID > c.cap {
 		c.requestID = ResetID
 	}
+}
+
+// prevents integer overflow errors when converting "int" to "int32" to ensure safe conversion
+func (c *Client) safeIntConversion(n int) (int32, error) {
+	if n > math.MaxInt32 || n < math.MinInt32 {
+		return 0, fmt.Errorf("integer overflow: %d is out of bounds", n)
+	}
+
+	return int32(n), nil
 }
