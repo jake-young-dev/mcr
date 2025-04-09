@@ -1,0 +1,16 @@
+name: "security scan"
+on:
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v4
+      
+      - name: security scan
+        uses: securego/gosec@v2.22.3
+        with:
+          args: ./...
