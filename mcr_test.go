@@ -3,6 +3,7 @@ package mcr
 import (
 	"encoding/binary"
 	"errors"
+	"math"
 	"net"
 	"strings"
 	"sync"
@@ -16,12 +17,58 @@ TestingController() function that would call nested tRemoteCommand() functions w
 */
 
 // run with "go test -cover -v" to show coverage and to list the tests ran
+// or run these commands to generate coverage file and parse it using html
+// go test -cover -coverprofile coverage.out
+// to show html explanation
+// go tool cover -html coverage.out
+
+// test creating a new client with default options
+func TestNewClient(t *testing.T) {
+	tc := NewClient("test")
+
+	if tc.GetAddress() != "test" {
+		t.Fatal("address does not match on creation")
+	}
+
+	if tc.GetCap() != DefaultCap {
+		t.Fatal("default cap not set correctly")
+	}
+
+	if tc.GetPort() != DefaultPort {
+		t.Fatal("default port not set")
+	}
+
+	if tc.GetReqID() != ResetID {
+		t.Fatal("default request id not set")
+	}
+
+	if tc.GetTimeout() != DefaultTimeout {
+		t.Fatal("default timeout not set")
+	}
+}
+
+// testing sending command without connecting
+func TestCommandError(t *testing.T) {
+	tc := NewClient("test")
+	_, err := tc.Command("hi")
+	if !errors.Is(err, ErrClientNotConnected) {
+		t.Fatal("proper connection handling failing on command send")
+	}
+}
+
+func TestCommandNoResError(t *testing.T) {
+	tc := NewClient("test")
+	err := tc.CommandNoResponse("hi")
+	if !errors.Is(err, ErrClientNotConnected) {
+		t.Fatal("proper connection handling failing on command send, no response")
+	}
+}
 
 // test case creating a new client and mock connection and sending a command using the Command
 // method. Command value is sent in server reply to confirm data integrity
 func TestRemoteCommand(t *testing.T) {
 	var (
-		testingClient *Client  //main testing client
+		testingClient Client   //main testing client
 		recv, serv    net.Conn //testing server and client using net.Pipe
 		testCmd       string   //command to send to test server
 		wg            sync.WaitGroup
@@ -103,7 +150,7 @@ func TestRemoteCommand(t *testing.T) {
 // testing sending a command to the server without waiting for a response
 func TestRemoteCommandNoResponse(t *testing.T) {
 	var (
-		testingClient *Client  //main testing client
+		testingClient Client   //main testing client
 		recv, serv    net.Conn //testing server and client using net.Pipe
 		testCmd       string   //command to send to test server
 		wg            sync.WaitGroup
@@ -170,9 +217,9 @@ func TestRemoteCommandNoResponse(t *testing.T) {
 // testing the requestID handling ensuring it is reset once it overflows the cap
 func TestRequestIDReset(t *testing.T) {
 	testingClient := NewClient("testing")
-	testingClient.requestID = testingClient.cap
+	testingClient.SetReqID(DefaultCap)
 	testingClient.incrementRequestID()
-	if testingClient.requestID != ResetID {
+	if testingClient.GetReqID() != ResetID {
 		t.Fatal("request id did not properly reset")
 	}
 	//close client
@@ -185,9 +232,9 @@ func TestRequestIDReset(t *testing.T) {
 // testing the WithCap option
 func TestCapOption(t *testing.T) {
 	testingClient := NewClient("testing", WithCap(20))
-	testingClient.requestID = testingClient.cap
+	testingClient.SetReqID(20)
 	testingClient.incrementRequestID()
-	if testingClient.requestID != ResetID {
+	if testingClient.GetReqID() != 1 {
 		t.Fatal("custom request id did not properly reset")
 	}
 	//close client
@@ -197,10 +244,19 @@ func TestCapOption(t *testing.T) {
 	}
 }
 
+// testing cap getter/setters
+func TestReqIDGetSet(t *testing.T) {
+	tc := NewClient("testing")
+	tc.SetReqID(66)
+	if tc.GetReqID() != 66 {
+		t.Fatal("request id getter/setter values do not match")
+	}
+}
+
 // testing implmenting a custom timeout for the client
 func TestTimeoutOption(t *testing.T) {
 	testingClient := NewClient("testing", WithTimeout(time.Second*5))
-	if testingClient.timeout != time.Second*5 {
+	if testingClient.GetTimeout() != time.Second*5 {
 		t.Fatal("timeout value did not update when supplying the timeout")
 	}
 	//close client
@@ -214,7 +270,7 @@ func TestTimeoutOption(t *testing.T) {
 func TestPortOption(t *testing.T) {
 	testPort := 9876
 	tc := NewClient("test", WithPort(testPort))
-	if tc.port != testPort {
+	if tc.GetPort() != testPort {
 		t.Fatal("ports did not match")
 	}
 }
@@ -223,15 +279,100 @@ func TestPortOption(t *testing.T) {
 func TestConnectionOption(t *testing.T) {
 	srv, _ := net.Pipe()
 	tc := NewClient("test", WithConnection(srv))
-	if tc.connection != srv {
+	if tc.GetConnection() != srv {
 		t.Fatal("connection was not updated")
+	}
+}
+
+// testing int conversions
+func TestIntConversionFail(t *testing.T) {
+	tv := math.MaxInt32 + 1
+	tc := NewClient("test")
+	_, err := tc.safeIntConversion(tv)
+	if err == nil {
+		t.Fatal("integer overflow")
+	}
+}
+
+// testing address getter
+func TestAddrGetter(t *testing.T) {
+	mock := "test"
+	tc := NewClient(mock)
+
+	if tc.GetAddress() != mock {
+		t.Fatal("address value does not match getter response")
+	}
+}
+
+// testing timeout getter/setter
+func TestTimeoutGetSet(t *testing.T) {
+	tc := NewClient("test")
+	to := time.Second * 30
+	tc.SetTimeout(to)
+
+	if tc.GetTimeout() != to {
+		t.Fatal("timeout setter not matching getter value")
+	}
+}
+
+// testing cap getter/setter
+func TestCapGetSet(t *testing.T) {
+	tc := NewClient("test")
+	tp := int32(66)
+
+	tc.SetCap(tp)
+
+	if tc.GetCap() != tp {
+		t.Fatal("cap setter not matching getter value")
+	}
+}
+
+// testing overflowing packet size
+func TestCreatePacketTooBig(t *testing.T) {
+	tc := NewClient("test")
+
+	d := make([]byte, math.MaxInt32)
+
+	_, err := tc.createPacket(d, CommandPacket)
+	if !errors.Is(err, ErrIntOverflow) {
+		t.Fatal("integer overflow allowed")
+	}
+}
+
+func TestAuthenticatePacketTooBig(t *testing.T) {
+	tc := NewClient("test")
+	d := make([]byte, math.MaxInt32)
+
+	err := tc.authenticate(d)
+	if !errors.Is(err, ErrIntOverflow) {
+		t.Fatal("integer overflow allowed")
+	}
+}
+
+func TestSendCommandOverflow(t *testing.T) {
+	tc := NewClient("test", WithConnection(&net.TCPConn{}))
+	d := make([]byte, math.MaxInt32)
+
+	_, err := tc.Command(string(d))
+	if !errors.Is(err, ErrIntOverflow) {
+		t.Fatal("integer overflow allowed")
+	}
+}
+
+func TestSendNoResOverflow(t *testing.T) {
+	tc := NewClient("test", WithConnection(&net.TCPConn{}))
+	d := make([]byte, math.MaxInt32)
+
+	err := tc.CommandNoResponse(string(d))
+	if !errors.Is(err, ErrIntOverflow) {
+		t.Fatal("integer overflow allowed")
 	}
 }
 
 // testing authentication using the Connect method
 func TestAuthentication(t *testing.T) {
 	var (
-		testingClient *Client  //main testing client
+		testingClient Client   //main testing client
 		recv, serv    net.Conn //testing server and client using net.Pipe
 		testPwd       string   //command to send to test server
 		wg            sync.WaitGroup
