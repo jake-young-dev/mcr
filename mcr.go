@@ -106,7 +106,7 @@ func NewClient(addr string, opts ...Option) Client {
 // to clean up the connection
 func (c *client) Connect(password string) error {
 	if c.connection == nil {
-		connection, err := net.DialTimeout(Protocol, fmt.Sprintf("%s:%d", c.address, c.port), c.timeout)
+		connection, err := net.DialTimeout(Protocol, net.JoinHostPort(c.address, fmt.Sprint(c.port)), c.timeout)
 		if err != nil {
 			return err
 		}

@@ -3,6 +3,7 @@ package mcr
 import (
 	"encoding/binary"
 	"errors"
+	"io"
 	"math"
 	"net"
 	"strings"
@@ -12,18 +13,20 @@ import (
 )
 
 /*
-This test a file is a bit messy, it should be rewritten to use a setup() and teardown() function utilizing a
-TestingController() function that would call nested tRemoteCommand() functions while handling proper setup/teardown
+Listen, this file really got away from me. With the goal of high code coverage this file has turned into an abomination, I tried
+to group tests with each other but I have entirely lost track at this point. These tests should be rewritten to use a TestingController
+that will call nested tTestFunction funcs while handling proper setup/teardown using setup() and teardown() functions. This would allow test
+scaffolding to only be written once instead of in every test function. When that rewrite will come, who knows. I will continue to add tests
+until it drives me crazy enough to rewrite.
 */
 
-// run with "go test -cover -v" to show coverage and to list the tests ran
-// or run these commands to generate coverage file and parse it using html
+// command to generate code coverage and run tests
 // go test -cover -coverprofile coverage.out
-// to show html explanation
+// open coverage file in browser
 // go tool cover -html coverage.out
 
 // test creating a new client with default options
-func TestNewClient(t *testing.T) {
+func TestNewClientDefaults(t *testing.T) {
 	tc := NewClient("test")
 
 	if tc.GetAddress() != "test" {
@@ -135,6 +138,33 @@ func TestRemoteCommand(t *testing.T) {
 	close(ec)
 	if check != nil {
 		t.Fatal(check)
+	}
+
+	//close client
+	err = testingClient.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	serv.Close()
+	recv.Close()
+}
+
+func TestConnectOverflow(t *testing.T) {
+	var (
+		testingClient Client   //main testing client
+		recv, serv    net.Conn //testing server and client using net.Pipe
+	)
+
+	//create client and server with Pipe
+	serv, recv = net.Pipe()
+	//create main testing client with fake address
+	testingClient = NewClient("testing", WithConnection(recv))
+
+	overflow := make([]byte, math.MaxInt32)
+	err := testingClient.authenticate(overflow)
+	if err != ErrIntOverflow {
+		t.Fatal("password authentication integer overflow")
 	}
 
 	//close client
@@ -357,6 +387,62 @@ func TestSendCommandOverflow(t *testing.T) {
 	if !errors.Is(err, ErrIntOverflow) {
 		t.Fatal("integer overflow allowed")
 	}
+}
+
+func TestSendCommandWriteFail(t *testing.T) {
+	var (
+		testingClient Client   //main testing client
+		recv, serv    net.Conn //testing server and client using net.Pipe
+	)
+
+	//create client and server with Pipe
+	serv, recv = net.Pipe()
+	//create main testing client with fake address
+	testingClient = NewClient("testing", WithConnection(recv))
+
+	//close pipe to force error
+	recv.Close()
+
+	err := testingClient.send([]byte("hi"))
+	if err != io.ErrClosedPipe {
+		t.Fatal(err)
+	}
+
+	//close client
+	err = testingClient.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	serv.Close()
+}
+
+func TestSendAndRcvCommandWriteFail(t *testing.T) {
+	var (
+		testingClient Client   //main testing client
+		recv, serv    net.Conn //testing server and client using net.Pipe
+	)
+
+	//create client and server with Pipe
+	serv, recv = net.Pipe()
+	//create main testing client with fake address
+	testingClient = NewClient("testing", WithConnection(recv))
+
+	//close pipe to force error
+	recv.Close()
+
+	_, err := testingClient.sendAndRecv([]byte("hi"))
+	if err != io.ErrClosedPipe {
+		t.Fatal(err)
+	}
+
+	//close client
+	err = testingClient.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	serv.Close()
 }
 
 func TestSendNoResOverflow(t *testing.T) {
