@@ -29,23 +29,23 @@ until it drives me crazy enough to rewrite.
 func TestNewClientDefaults(t *testing.T) {
 	tc := NewClient("test")
 
-	if tc.GetAddress() != "test" {
+	if tc.Address() != "test" {
 		t.Fatal("address does not match on creation")
 	}
 
-	if tc.GetCap() != DefaultCap {
+	if tc.Cap() != DefaultCap {
 		t.Fatal("default cap not set correctly")
 	}
 
-	if tc.GetPort() != DefaultPort {
+	if tc.Port() != DefaultPort {
 		t.Fatal("default port not set")
 	}
 
-	if tc.GetReqID() != ResetID {
+	if tc.RequestID() != ResetID {
 		t.Fatal("default request id not set")
 	}
 
-	if tc.GetTimeout() != DefaultTimeout {
+	if tc.Timeout() != DefaultTimeout {
 		t.Fatal("default timeout not set")
 	}
 }
@@ -247,9 +247,9 @@ func TestRemoteCommandNoResponse(t *testing.T) {
 // testing the requestID handling ensuring it is reset once it overflows the cap
 func TestRequestIDReset(t *testing.T) {
 	testingClient := NewClient("testing")
-	testingClient.SetReqID(DefaultCap)
+	testingClient.SetRequestID(DefaultCap)
 	testingClient.incrementRequestID()
-	if testingClient.GetReqID() != ResetID {
+	if testingClient.RequestID() != ResetID {
 		t.Fatal("request id did not properly reset")
 	}
 	//close client
@@ -262,9 +262,9 @@ func TestRequestIDReset(t *testing.T) {
 // testing the WithCap option
 func TestCapOption(t *testing.T) {
 	testingClient := NewClient("testing", WithCap(20))
-	testingClient.SetReqID(20)
+	testingClient.SetRequestID(20)
 	testingClient.incrementRequestID()
-	if testingClient.GetReqID() != 1 {
+	if testingClient.RequestID() != 1 {
 		t.Fatal("custom request id did not properly reset")
 	}
 	//close client
@@ -277,8 +277,8 @@ func TestCapOption(t *testing.T) {
 // testing cap getter/setters
 func TestReqIDGetSet(t *testing.T) {
 	tc := NewClient("testing")
-	tc.SetReqID(66)
-	if tc.GetReqID() != 66 {
+	tc.SetRequestID(66)
+	if tc.RequestID() != 66 {
 		t.Fatal("request id getter/setter values do not match")
 	}
 }
@@ -286,7 +286,7 @@ func TestReqIDGetSet(t *testing.T) {
 // testing implmenting a custom timeout for the client
 func TestTimeoutOption(t *testing.T) {
 	testingClient := NewClient("testing", WithTimeout(time.Second*5))
-	if testingClient.GetTimeout() != time.Second*5 {
+	if testingClient.Timeout() != time.Second*5 {
 		t.Fatal("timeout value did not update when supplying the timeout")
 	}
 	//close client
@@ -300,7 +300,7 @@ func TestTimeoutOption(t *testing.T) {
 func TestPortOption(t *testing.T) {
 	testPort := 9876
 	tc := NewClient("test", WithPort(testPort))
-	if tc.GetPort() != testPort {
+	if tc.Port() != testPort {
 		t.Fatal("ports did not match")
 	}
 }
@@ -309,7 +309,7 @@ func TestPortOption(t *testing.T) {
 func TestConnectionOption(t *testing.T) {
 	srv, _ := net.Pipe()
 	tc := NewClient("test", WithConnection(srv))
-	if tc.GetConnection() != srv {
+	if tc.Connection() != srv {
 		t.Fatal("connection was not updated")
 	}
 }
@@ -329,7 +329,7 @@ func TestAddrGetter(t *testing.T) {
 	mock := "test"
 	tc := NewClient(mock)
 
-	if tc.GetAddress() != mock {
+	if tc.Address() != mock {
 		t.Fatal("address value does not match getter response")
 	}
 }
@@ -340,7 +340,7 @@ func TestTimeoutGetSet(t *testing.T) {
 	to := time.Second * 30
 	tc.SetTimeout(to)
 
-	if tc.GetTimeout() != to {
+	if tc.Timeout() != to {
 		t.Fatal("timeout setter not matching getter value")
 	}
 }
@@ -352,7 +352,7 @@ func TestCapGetSet(t *testing.T) {
 
 	tc.SetCap(tp)
 
-	if tc.GetCap() != tp {
+	if tc.Cap() != tp {
 		t.Fatal("cap setter not matching getter value")
 	}
 }

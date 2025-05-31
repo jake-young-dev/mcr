@@ -59,21 +59,19 @@ type client struct {
 }
 
 type Client interface {
-	//main rcon methods
 	Connect(password string) error
 	Command(cmd string) (string, error)
 	CommandNoResponse(cmd string) error
 	Close() error
-	//getter/setter methods
-	GetReqID() int32
-	SetReqID(id int32)
-	GetTimeout() time.Duration
+	RequestID() int32
+	SetRequestID(id int32)
+	Timeout() time.Duration
 	SetTimeout(t time.Duration)
-	GetCap() int32
+	Cap() int32
 	SetCap(cp int32)
-	GetConnection() net.Conn //can't be updated so no setter
-	GetPort() int            //can't be updated so no setter
-	GetAddress() string      //can't be updated so no setter
+	Connection() net.Conn
+	Port() int
+	Address() string
 	//filtered methods
 	sendAndRecv(packet []byte) (*response, error)
 	send(packet []byte) error
@@ -171,17 +169,17 @@ func (c *client) Close() error {
 }
 
 // returns current packet request ID
-func (c *client) GetReqID() int32 {
+func (c *client) RequestID() int32 {
 	return c.requestID
 }
 
 // sets packet request ID
-func (c *client) SetReqID(id int32) {
+func (c *client) SetRequestID(id int32) {
 	c.requestID = id
 }
 
 // returns connection timeout value
-func (c *client) GetTimeout() time.Duration {
+func (c *client) Timeout() time.Duration {
 	return c.timeout
 }
 
@@ -191,7 +189,7 @@ func (c *client) SetTimeout(t time.Duration) {
 }
 
 // returns request ID cap, request ID is reset once this cap hit
-func (c *client) GetCap() int32 {
+func (c *client) Cap() int32 {
 	return c.cap
 }
 
@@ -202,19 +200,19 @@ func (c *client) SetCap(cp int32) {
 
 // returns connection, connections cannot be updated after connection, a new
 // client must be created to change connection.
-func (c *client) GetConnection() net.Conn {
+func (c *client) Connection() net.Conn {
 	return c.connection
 }
 
 // returns connection port, port cannot be updated after connection, a new client must
 // be created to update port.
-func (c *client) GetPort() int {
+func (c *client) Port() int {
 	return c.port
 }
 
 // returns connection address, address cannot be updated after connection, a new client
 // must be created to update the address.
-func (c *client) GetAddress() string {
+func (c *client) Address() string {
 	return c.address
 }
 
