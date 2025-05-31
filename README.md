@@ -1,5 +1,5 @@
 # mcr
-[![tests](https://github.com/jake-young-dev/mcr/actions/workflows/test.yaml/badge.svg?branch=master&event=push)](https://github.com/jake-young-dev/mcr/actions/workflows/test.yaml) <br />
+[![tests](https://github.com/jake-young-dev/mcr/actions/workflows/test.yaml/badge.svg?branch=main&event=push)](https://github.com/jake-young-dev/mcr/actions/workflows/test.yaml) <br />
 mcr is a dependency-free remote console (RCon) package written in Golang following the [Source](https://developer.valvesoftware.com/wiki/Source_RCON_Protocol) protocol.
 
 # Usage
