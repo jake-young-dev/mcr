@@ -22,7 +22,7 @@ func WithTimeout(timeout time.Duration) Option {
 	}
 }
 
-// option to allow for custom request id cap
+// option to allow for custom request id max value
 func WithCap(c int32) Option {
 	return func(cn *client) {
 		cn.cap = c
@@ -33,5 +33,12 @@ func WithCap(c int32) Option {
 func WithConnection(c net.Conn) Option {
 	return func(cn *client) {
 		cn.connection = c
+	}
+}
+
+// option to allow for setting current request ID
+func WithID(i int32) Option {
+	return func(cn *client) {
+		cn.requestID = i
 	}
 }

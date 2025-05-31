@@ -66,9 +66,6 @@ type Client interface {
 	RequestID() int32
 	SetRequestID(id int32)
 	Timeout() time.Duration
-	SetTimeout(t time.Duration)
-	Cap() int32
-	SetCap(cp int32)
 	Connection() net.Conn
 	Port() int
 	Address() string
@@ -181,21 +178,6 @@ func (c *client) SetRequestID(id int32) {
 // returns connection timeout value
 func (c *client) Timeout() time.Duration {
 	return c.timeout
-}
-
-// updates connection timeout
-func (c *client) SetTimeout(t time.Duration) {
-	c.timeout = t
-}
-
-// returns request ID cap, request ID is reset once this cap hit
-func (c *client) Cap() int32 {
-	return c.cap
-}
-
-// update request ID reset point
-func (c *client) SetCap(cp int32) {
-	c.cap = cp
 }
 
 // returns connection, connections cannot be updated after connection, a new

@@ -33,10 +33,6 @@ func TestNewClientDefaults(t *testing.T) {
 		t.Fatal("address does not match on creation")
 	}
 
-	if tc.Cap() != DefaultCap {
-		t.Fatal("default cap not set correctly")
-	}
-
 	if tc.Port() != DefaultPort {
 		t.Fatal("default port not set")
 	}
@@ -314,6 +310,14 @@ func TestConnectionOption(t *testing.T) {
 	}
 }
 
+func TestRequestIDOption(t *testing.T) {
+	x := int32(66)
+	tc := NewClient("test", WithID(x))
+	if tc.RequestID() != x {
+		t.Fatal("request id not updated")
+	}
+}
+
 // testing int conversions
 func TestIntConversionFail(t *testing.T) {
 	tv := math.MaxInt32 + 1
@@ -335,25 +339,12 @@ func TestAddrGetter(t *testing.T) {
 }
 
 // testing timeout getter/setter
-func TestTimeoutGetSet(t *testing.T) {
-	tc := NewClient("test")
+func TestTimeoutGet(t *testing.T) {
 	to := time.Second * 30
-	tc.SetTimeout(to)
+	tc := NewClient("test", WithTimeout(to))
 
 	if tc.Timeout() != to {
 		t.Fatal("timeout setter not matching getter value")
-	}
-}
-
-// testing cap getter/setter
-func TestCapGetSet(t *testing.T) {
-	tc := NewClient("test")
-	tp := int32(66)
-
-	tc.SetCap(tp)
-
-	if tc.Cap() != tp {
-		t.Fatal("cap setter not matching getter value")
 	}
 }
 
