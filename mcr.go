@@ -29,6 +29,11 @@ const (
 	DefaultPort    = 61695
 )
 
+var (
+	ErrClientNotConnected = errors.New("client not connected. The Connect method must be called before commands can be run")
+	ErrIntOverflow        = errors.New("integer overflowed 32 bits")
+)
+
 // remote console response headers
 type headers struct {
 	Size      int32 //size of packet
@@ -44,7 +49,7 @@ type response struct {
 }
 
 // remote console client
-type Client struct {
+type client struct {
 	connection net.Conn      //server connection
 	requestID  int32         //self-incrementing request counter used for unique request id's
 	address    string        //server address
@@ -53,12 +58,17 @@ type Client struct {
 	cap        int32         //request id capacity before resetting it
 }
 
-type IClient interface {
-	//main rcon methods
+type Client interface {
 	Connect(password string) error
 	Command(cmd string) (string, error)
 	CommandNoResponse(cmd string) error
 	Close() error
+	RequestID() int32
+	SetRequestID(id int32)
+	Timeout() time.Duration
+	Connection() net.Conn
+	Port() int
+	Address() string
 	//filtered methods
 	sendAndRecv(packet []byte) (*response, error)
 	send(packet []byte) error
@@ -70,8 +80,8 @@ type IClient interface {
 
 // creates a new remote console client configured with the supplied options. The client does not connect to the server until the
 // Connect method is called to authenticate the client. Check the README for information on default values
-func NewClient(addr string, opts ...Option) *Client {
-	c := &Client{
+func NewClient(addr string, opts ...Option) Client {
+	c := &client{
 		connection: nil,
 		requestID:  ResetID,
 		address:    addr,
@@ -89,9 +99,9 @@ func NewClient(addr string, opts ...Option) *Client {
 
 // connects to server and authenticates the client. Ensure to call, or defer the call to, the Close method
 // to clean up the connection
-func (c *Client) Connect(password string) error {
+func (c *client) Connect(password string) error {
 	if c.connection == nil {
-		connection, err := net.DialTimeout(Protocol, fmt.Sprintf("%s:%d", c.address, c.port), c.timeout)
+		connection, err := net.DialTimeout(Protocol, net.JoinHostPort(c.address, fmt.Sprint(c.port)), c.timeout)
 		if err != nil {
 			return err
 		}
@@ -109,9 +119,9 @@ func (c *Client) Connect(password string) error {
 
 // sends a command to the server and returns the server response, an error is returned if the client has
 // not connected to the server before attempting to send a command
-func (c *Client) Command(cmd string) (string, error) {
+func (c *client) Command(cmd string) (string, error) {
 	if c.connection == nil {
-		return "", errors.New("the Connect method must be called before commands can be run")
+		return "", ErrClientNotConnected
 	}
 
 	packet, err := c.createPacket([]byte(cmd), CommandPacket)
@@ -129,9 +139,9 @@ func (c *Client) Command(cmd string) (string, error) {
 
 // sends a command to the server without waiting for the response, an error is returned if the client has
 // not connected to the server before attempting to send a command
-func (c *Client) CommandNoResponse(cmd string) error {
+func (c *client) CommandNoResponse(cmd string) error {
 	if c.connection == nil {
-		return errors.New("the Connect method must be called before commands can be run")
+		return ErrClientNotConnected
 	}
 
 	packet, err := c.createPacket([]byte(cmd), CommandPacket)
@@ -143,7 +153,7 @@ func (c *Client) CommandNoResponse(cmd string) error {
 }
 
 // closes remote console connection, nil's out the connection value in client struct, and resets the request id
-func (c *Client) Close() error {
+func (c *client) Close() error {
 	c.requestID = ResetID
 	if c.connection != nil {
 		err := c.connection.Close()
@@ -155,9 +165,42 @@ func (c *Client) Close() error {
 	return nil
 }
 
+// returns current packet request ID
+func (c *client) RequestID() int32 {
+	return c.requestID
+}
+
+// sets packet request ID
+func (c *client) SetRequestID(id int32) {
+	c.requestID = id
+}
+
+// returns connection timeout value
+func (c *client) Timeout() time.Duration {
+	return c.timeout
+}
+
+// returns connection, connections cannot be updated after connection, a new
+// client must be created to change connection.
+func (c *client) Connection() net.Conn {
+	return c.connection
+}
+
+// returns connection port, port cannot be updated after connection, a new client must
+// be created to update port.
+func (c *client) Port() int {
+	return c.port
+}
+
+// returns connection address, address cannot be updated after connection, a new client
+// must be created to update the address.
+func (c *client) Address() string {
+	return c.address
+}
+
 // constructs and sends the tcp packet to the server and parses the response data, requestID is incremented
 // after each packet is sent
-func (c *Client) sendAndRecv(packet []byte) (*response, error) {
+func (c *client) sendAndRecv(packet []byte) (*response, error) {
 	_, err := c.connection.Write(packet)
 	if err != nil {
 		return nil, err
@@ -189,7 +232,7 @@ func (c *Client) sendAndRecv(packet []byte) (*response, error) {
 
 // constructs and sends the tcp packet to the server without waiting for a response, requestID is incremented
 // after each packet is sent
-func (c *Client) send(packet []byte) error {
+func (c *client) send(packet []byte) error {
 	_, err := c.connection.Write(packet)
 	if err != nil {
 		return err
@@ -201,7 +244,7 @@ func (c *Client) send(packet []byte) error {
 
 // creates remote console packet including the body and packet type returning the packet bytes. These bytes
 // can be sent directly to the server.
-func (c *Client) createPacket(body []byte, packetType int32) ([]byte, error) {
+func (c *client) createPacket(body []byte, packetType int32) ([]byte, error) {
 	length, err := c.safeIntConversion(len(body) + PacketRequestSize)
 	if err != nil {
 		return nil, err
@@ -240,7 +283,7 @@ func (c *Client) createPacket(body []byte, packetType int32) ([]byte, error) {
 
 // sends authentication packet to server. This must be called before
 // any commands can be run and returns an error if the supplied password is incorrect
-func (c *Client) authenticate(password []byte) error {
+func (c *client) authenticate(password []byte) error {
 	packet, err := c.createPacket(password, AuthPacket)
 	if err != nil {
 		return err
@@ -260,7 +303,7 @@ func (c *Client) authenticate(password []byte) error {
 
 // a simple handler for requestID header, the requestID is incremented after each packet sent to the server
 // and is reset once it exceeds IDCap to prevent any overflowing issues
-func (c *Client) incrementRequestID() {
+func (c *client) incrementRequestID() {
 	c.requestID++
 	if c.requestID > c.cap {
 		c.requestID = ResetID
@@ -268,9 +311,9 @@ func (c *Client) incrementRequestID() {
 }
 
 // prevents integer overflow errors when converting "int" to "int32" to ensure safe conversion
-func (c *Client) safeIntConversion(n int) (int32, error) {
+func (c *client) safeIntConversion(n int) (int32, error) {
 	if n > math.MaxInt32 || n < math.MinInt32 {
-		return 0, fmt.Errorf("integer overflow: %d is out of bounds", n)
+		return 0, ErrIntOverflow
 	}
 
 	return int32(n), nil
