@@ -38,3 +38,6 @@ func main() {
 # Security
 - RCon is an inherently insecure protocol that sends passwords in plaintext. I recommend using a VPN or keeping the connection local when possible.
 - All code is checked with [gosec](https://github.com/securego/gosec) as an added security measure
+
+
+REVISIT this, i used pkgsite to fix the pkg docs but i don't love the breaking changes to the functionality for it

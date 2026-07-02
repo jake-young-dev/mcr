@@ -67,7 +67,7 @@ func TestCommandNoResError(t *testing.T) {
 // method. Command value is sent in server reply to confirm data integrity
 func TestRemoteCommand(t *testing.T) {
 	var (
-		testingClient Client   //main testing client
+		testingClient client   //main testing client
 		recv, serv    net.Conn //testing server and client using net.Pipe
 		testCmd       string   //command to send to test server
 		wg            sync.WaitGroup
@@ -102,7 +102,7 @@ func TestRemoteCommand(t *testing.T) {
 	}(testCmd)
 
 	//read command from testingClient
-	var resHead headers
+	var resHead header
 	err := binary.Read(serv, binary.LittleEndian, &resHead)
 	if err != nil {
 		t.Fatal(err)
@@ -148,7 +148,7 @@ func TestRemoteCommand(t *testing.T) {
 
 func TestConnectOverflow(t *testing.T) {
 	var (
-		testingClient Client   //main testing client
+		testingClient client   //main testing client
 		recv, serv    net.Conn //testing server and client using net.Pipe
 	)
 
@@ -176,7 +176,7 @@ func TestConnectOverflow(t *testing.T) {
 // testing sending a command to the server without waiting for a response
 func TestRemoteCommandNoResponse(t *testing.T) {
 	var (
-		testingClient Client   //main testing client
+		testingClient client   //main testing client
 		recv, serv    net.Conn //testing server and client using net.Pipe
 		testCmd       string   //command to send to test server
 		wg            sync.WaitGroup
@@ -206,7 +206,7 @@ func TestRemoteCommandNoResponse(t *testing.T) {
 	}(testCmd)
 
 	//read command from testingClient
-	var resHead headers
+	var resHead header
 	err := binary.Read(serv, binary.LittleEndian, &resHead)
 	if err != nil {
 		t.Fatal(err)
@@ -382,7 +382,7 @@ func TestSendCommandOverflow(t *testing.T) {
 
 func TestSendCommandWriteFail(t *testing.T) {
 	var (
-		testingClient Client   //main testing client
+		testingClient client   //main testing client
 		recv, serv    net.Conn //testing server and client using net.Pipe
 	)
 
@@ -410,7 +410,7 @@ func TestSendCommandWriteFail(t *testing.T) {
 
 func TestSendAndRcvCommandWriteFail(t *testing.T) {
 	var (
-		testingClient Client   //main testing client
+		testingClient client   //main testing client
 		recv, serv    net.Conn //testing server and client using net.Pipe
 	)
 
@@ -449,7 +449,7 @@ func TestSendNoResOverflow(t *testing.T) {
 // testing authentication using the Connect method
 func TestAuthentication(t *testing.T) {
 	var (
-		testingClient Client   //main testing client
+		testingClient client   //main testing client
 		recv, serv    net.Conn //testing server and client using net.Pipe
 		testPwd       string   //command to send to test server
 		wg            sync.WaitGroup
@@ -478,7 +478,7 @@ func TestAuthentication(t *testing.T) {
 	}(testPwd)
 
 	//read command from testingClient
-	var resHead headers
+	var resHead header
 	err := binary.Read(serv, binary.LittleEndian, &resHead)
 	if err != nil {
 		t.Fatal(err)
