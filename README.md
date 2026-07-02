@@ -3,7 +3,7 @@
 mcr is a pure go remote console (RCon) package following the [Source](https://developer.valvesoftware.com/wiki/Source_RCON_Protocol) protocol.
 
 # Usage
-```
+```go
 import (
 	"log"
 	"os"
