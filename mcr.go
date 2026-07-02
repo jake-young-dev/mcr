@@ -85,7 +85,7 @@ type client interface {
 
 // NewClient creates a new remote console client configured with the supplied options. The Connect method must be called before the server
 // can be interacted with.
-func NewClient(addr string, opts ...Option) client {
+func NewClient(addr string, opts ...Option) *Client {
 	c := &Client{
 		connection: nil,
 		requestID:  ResetID,
