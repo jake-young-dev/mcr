@@ -1,6 +1,6 @@
 # mcr
 [![tests](https://github.com/jake-young-dev/mcr/actions/workflows/test.yaml/badge.svg?branch=main&event=push)](https://github.com/jake-young-dev/mcr/actions/workflows/test.yaml) <br />
-mcr is a pure-go remote console (RCon) package written in Golang following the [Source](https://developer.valvesoftware.com/wiki/Source_RCON_Protocol) protocol.
+mcr is a pure go remote console (RCon) package following the [Source](https://developer.valvesoftware.com/wiki/Source_RCON_Protocol) protocol.
 
 # Usage
 ```
@@ -38,6 +38,3 @@ func main() {
 # Security
 - RCon is an inherently insecure protocol that sends passwords in plaintext. I recommend using a VPN or keeping the connection local when possible.
 - All code is checked with [gosec](https://github.com/securego/gosec) as an added security measure
-
-
-REVISIT this, i used pkgsite to fix the pkg docs but i don't love the breaking changes to the functionality for it

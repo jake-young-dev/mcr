@@ -3,7 +3,6 @@
 package mcr
 
 import (
-	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -226,7 +225,7 @@ func (c *Client) sendAndRecv(packet []byte) (*response, error) {
 	}
 
 	//remove byte padding
-	payload = payload[:len(payload)-2]
+	payload = payload[:len(payload)-PacketPaddingSize]
 
 	c.incrementRequestID()
 
@@ -263,29 +262,20 @@ func (c *Client) createPacket(body []byte, packetType int32) ([]byte, error) {
 	//[Type] request packet type: int32
 	//[Body] body of request/response: Null-terminated ASCII String
 	//[Padding] body must be terminated by two null bytes
+	head := header{
+		Size:      length,
+		RequestID: c.requestID,
+		Type:      packetType,
+	}
+	buffer := make([]byte, 0, binary.Size(head)+len(body)+2)
+	buffer, err = binary.Append(buffer, binary.LittleEndian, head)
+	if err != nil {
+		return nil, err
+	}
+	buffer = append(buffer, body...)
+	buffer = append(buffer, make([]byte, PacketPaddingSize)...)
 
-	var buffer bytes.Buffer
-	err = binary.Write(&buffer, binary.LittleEndian, length)
-	if err != nil {
-		return nil, err
-	}
-	err = binary.Write(&buffer, binary.LittleEndian, c.requestID)
-	if err != nil {
-		return nil, err
-	}
-	err = binary.Write(&buffer, binary.LittleEndian, packetType)
-	if err != nil {
-		return nil, err
-	}
-	err = binary.Write(&buffer, binary.LittleEndian, body)
-	if err != nil {
-		return nil, err
-	}
-	err = binary.Write(&buffer, binary.LittleEndian, [PacketPaddingSize]byte{}) //padding
-	if err != nil {
-		return nil, err
-	}
-	return buffer.Bytes(), nil
+	return buffer, nil
 }
 
 // sends authentication packet to server. This must be called before
