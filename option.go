@@ -5,38 +5,39 @@ import (
 	"time"
 )
 
-// request option func skeleton
 type Option func(cn *Client)
 
-// option to allow for custom port values
+// apply a custom port number to the connection
 func WithPort(port int) Option {
 	return func(cn *Client) {
 		cn.port = port
 	}
 }
 
-// option to allow for custom timeout values
+// set a specific timeout for the underlying connection, this timeout applies to the
+// resolution of addresses and establishing the initial connection
 func WithTimeout(timeout time.Duration) Option {
 	return func(cn *Client) {
 		cn.timeout = timeout
 	}
 }
 
-// option to allow for custom request id max value
+// set custom request ID cap, the request ID is the identifier used per-packet
+// a max value is set to prevent any overflow issues
 func WithCap(c int32) Option {
 	return func(cn *Client) {
 		cn.cap = c
 	}
 }
 
-// option to allow for use of custom connections
+// enables use of a custom connection instead of the default one
 func WithConnection(c net.Conn) Option {
 	return func(cn *Client) {
 		cn.connection = c
 	}
 }
 
-// option to allow for setting current request ID
+// updates the current request id
 func WithID(i int32) Option {
 	return func(cn *Client) {
 		cn.requestID = i
