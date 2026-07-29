@@ -256,18 +256,20 @@ func (c *Client) createPacket(body []byte, packetType int32) ([]byte, error) {
 		return nil, err
 	}
 
-	//packet structure
-	//[Length] length of packet: int32
-	//[RequestID] client set id for each request used to track responses: int32
-	//[Type] request packet type: int32
-	//[Body] body of request/response: Null-terminated ASCII String
-	//[Padding] body must be terminated by two null bytes
+	/*
+		packet structure
+			[Length] length of packet: int32
+			[RequestID] client set id for each request used to track responses: int32
+			[Type] request packet type: int32
+			[Body] body of request/response: Null-terminated ASCII String
+			[Padding] body must be terminated by two null bytes
+	*/
 	head := header{
 		Size:      length,
 		RequestID: c.requestID,
 		Type:      packetType,
 	}
-	buffer := make([]byte, 0, binary.Size(head)+len(body)+2)
+	buffer := make([]byte, 0, binary.Size(head)+len(body)+PacketPaddingSize)
 	buffer, err = binary.Append(buffer, binary.LittleEndian, head)
 	if err != nil {
 		return nil, err
