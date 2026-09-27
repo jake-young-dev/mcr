@@ -3,7 +3,6 @@ package mcr
 import (
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"io"
 	"math"
 	"net"
@@ -241,7 +240,6 @@ func TestRemoteCommand(t *testing.T) {
 	go func(testing string) {
 		res, err := testingClient.Command(testing)
 		if err != nil {
-			fmt.Println(err)
 			ec <- err
 			wg.Done()
 			return
