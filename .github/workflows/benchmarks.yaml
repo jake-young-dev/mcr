@@ -1,10 +1,14 @@
-name: "security scan"
+name: benchmarks
 on:
+  push:
+    branches: [ "**" ]
+    paths:
+      - "mcr*.go"
   pull_request:
     branches: [ "main" ]
 
 jobs:
-  scan:
+  tests:
     runs-on: ubuntu-latest
     steps:
       - name: checkout code
@@ -12,8 +16,7 @@ jobs:
 
       - name: "install golang"
         uses: https://github.com/jake-young-dev/install-go@v1.0.0
-      
-      - name: security scan
-        uses: securego/gosec@v2.22.3
-        with:
-          args: ./...
+
+      - name: bench
+        shell: bash
+        run: ./bench.sh

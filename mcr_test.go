@@ -3,6 +3,7 @@ package mcr
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
 	"math"
 	"net"
@@ -63,6 +64,159 @@ func TestCommandNoResError(t *testing.T) {
 	}
 }
 
+func BenchmarkSendNoRes(b *testing.B) {
+	b.ReportAllocs()
+	for b.Loop() {
+		var (
+			testingClient client   //main testing client
+			recv, serv    net.Conn //testing server and client using net.Pipe
+			testCmd       string   //command to send to test server
+			wg            sync.WaitGroup
+		)
+
+		//create client and server with Pipe
+		serv, recv = net.Pipe()
+		//create main testing client with fake address
+		testingClient = NewClient("testing", WithConnection(recv))
+		//arbitrary command for tests
+		testCmd = "test command"
+		wg = sync.WaitGroup{}
+
+		//create go routine to send command
+		wg.Add(1)
+		ec := make(chan error)
+		go func(testing string) {
+			err := testingClient.CommandNoResponse(testing)
+			if err != nil {
+				ec <- err
+				wg.Done()
+				return
+			}
+
+			ec <- nil
+			wg.Done()
+		}(testCmd)
+
+		//read command from testingClient
+		var resHead header
+		err := binary.Read(serv, binary.LittleEndian, &resHead)
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		response := make([]byte, 14)
+		_, err = serv.Read(response)
+		if err != nil {
+			b.Fatal(err)
+		}
+		//remove trailing bytes while confirming command request, these are cleaned in the client methods
+		if !strings.EqualFold(string(response[:len(response)-2]), testCmd) {
+			b.Fatal("the server did not recieve the matching command sent from client")
+		}
+
+		//wait for routine to wrap up
+		check := <-ec
+		wg.Wait()
+		close(ec)
+		if check != nil {
+			b.Fatal(check)
+		}
+
+		//close client
+		err = testingClient.Close()
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		serv.Close()
+		recv.Close()
+	}
+}
+
+func BenchmarkSendAndRecv(b *testing.B) {
+	b.ReportAllocs()
+	for b.Loop() {
+		var (
+			testingClient client   //main testing client
+			recv, serv    net.Conn //testing server and client using net.Pipe
+			testCmd       string   //command to send to test server
+			wg            sync.WaitGroup
+		)
+
+		//create client and server with Pipe
+		serv, recv = net.Pipe()
+		//create main testing client with fake address
+		testingClient = NewClient("testing", WithConnection(recv))
+		//arbitrary command for tests
+		testCmd = "test command"
+		wg = sync.WaitGroup{}
+
+		//create go routine to send command
+		wg.Add(1)
+		ec := make(chan error)
+		go func(testing string) {
+			res, err := testingClient.Command(testing)
+			if err != nil {
+				ec <- err
+				wg.Done()
+				return
+			}
+			//response should match command
+			if !strings.EqualFold(res, testing) {
+				ec <- errors.New("response from server does not match client request")
+				wg.Done()
+				return
+			}
+			ec <- nil
+			wg.Done()
+		}(testCmd)
+
+		//read command from testingClient
+		var resHead header
+		err := binary.Read(serv, binary.LittleEndian, &resHead)
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		response := make([]byte, 14)
+		_, err = serv.Read(response)
+		if err != nil {
+			b.Fatal(err)
+		}
+		//remove trailing bytes while confirming command request, these are cleaned in the client methods
+		if !strings.EqualFold(string(response[:len(response)-2]), testCmd) {
+			b.Fatal("the server did not recieve the matching command sent from client")
+		}
+
+		//create response packet, reply with command
+		p, err := testingClient.createPacket([]byte(testCmd), resHead.Type)
+		if err != nil {
+			b.Fatal(err)
+		}
+		_, err = serv.Write(p)
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		//wait for routine to wrap up
+		check := <-ec
+		wg.Wait()
+		close(ec)
+		if check != nil {
+			b.Fatal(check)
+		}
+
+		//close client
+		err = testingClient.Close()
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		serv.Close()
+		recv.Close()
+	}
+}
+
 // test case creating a new client and mock connection and sending a command using the Command
 // method. Command value is sent in server reply to confirm data integrity
 func TestRemoteCommand(t *testing.T) {
@@ -87,6 +241,7 @@ func TestRemoteCommand(t *testing.T) {
 	go func(testing string) {
 		res, err := testingClient.Command(testing)
 		if err != nil {
+			fmt.Println(err)
 			ec <- err
 			wg.Done()
 			return
