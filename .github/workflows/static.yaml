@@ -15,7 +15,7 @@ jobs:
       - name: "install golang"
         uses: jake-young-dev/install-go@v1.0.0
         with:
-          - purge: yes
+          purge: yes
       
       - name: security scan
         uses: securego/gosec@v2.22.3

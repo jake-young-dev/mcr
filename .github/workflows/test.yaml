@@ -15,7 +15,7 @@ jobs:
       - name: "install golang"
         uses: jake-young-dev/install-go@v1.0.0
         with:
-          - purge: yes
+          purge: yes
 
       - name: "unit tests"
         shell: bash
