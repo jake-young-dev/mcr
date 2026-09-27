@@ -2,8 +2,6 @@ name: benchmarks
 on:
   push:
     branches: [ "**" ]
-    paths:
-      - "mcr*.go"
   pull_request:
     branches: [ "main" ]
 
