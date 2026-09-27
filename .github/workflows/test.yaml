@@ -19,6 +19,10 @@ jobs:
         with:
           - purge: yes
 
-      - name: unit tests
+      - name: "unit tests"
         shell: bash
-        run: go test -cover
+        run: ./test.sh
+
+      # - name: unit tests
+      #   shell: bash
+      #   run: go test -cover
